@@ -4,3 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+diesel = { version = "2.2.9", features = ["postgres"] }
+pq-sys = { version = "0.7.1", features = ["bundled"] }
+openssl-sys = { version = "0.9.107", features = ["vendored"] } 
+dotenvy = "0.15"

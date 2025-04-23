@@ -1,0 +1,16 @@
+services:
+  postgressdb:
+    image: docker.io/library/postgres:17.4
+    container_name: postgresdb
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: db
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U user -d db'"]
+      interval: 1s
+      timeout: 2s
+      retries: 15
+    ports:
+      - 5430:5432
