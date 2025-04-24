@@ -12,3 +12,7 @@ target/
 # Added by cargo
 
 /target
+
+
+# IDE
+.vscode

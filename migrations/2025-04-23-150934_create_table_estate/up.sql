@@ -4,5 +4,6 @@ CREATE TABLE
         estate_id SERIAL PRIMARY KEY,
         name TEXT NOT NULL,
         location TEXT NOT NULL,
-        district TEXT NOT NULL
+        district TEXT NOT NULL,
+        landmark TEXT NOT NULL
     );
