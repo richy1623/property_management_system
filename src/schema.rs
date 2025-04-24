@@ -20,6 +20,7 @@ diesel::table! {
         name -> Text,
         location -> Text,
         district -> Text,
+        landmark -> Text,
     }
 }
 

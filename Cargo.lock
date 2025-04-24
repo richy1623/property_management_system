@@ -3,21 +3,6 @@
 version = 4
 
 [[package]]
-name = "PropertyManagementSystem"
-version = "0.1.0"
-dependencies = [
- "argon2",
- "diesel",
- "dotenvy",
- "openssl-sys",
- "password-hash",
- "pq-sys",
- "rand_core 0.9.3",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "argon2"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -313,6 +298,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02b3e5e68a3a1a02aad3ec490a98007cbc13c37cbe84a3cd7b8e406d76e7f778"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "property_management_system"
+version = "0.1.0"
+dependencies = [
+ "argon2",
+ "diesel",
+ "dotenvy",
+ "openssl-sys",
+ "password-hash",
+ "pq-sys",
+ "rand_core 0.9.3",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
