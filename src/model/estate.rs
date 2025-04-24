@@ -22,10 +22,10 @@ impl Estate {
 
     pub fn add_estate(
         conn: &mut PgConnection,
-        name: String,
-        location: String,
-        district: String,
-        landmark: String,
+        name: &str,
+        location: &str,
+        district: &str,
+        landmark: &str,
     ) -> Result<Estate, Error> {
         diesel::insert_into(estate::table)
             .values((

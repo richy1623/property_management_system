@@ -9,3 +9,5 @@ CREATE TABLE
         nrc TEXT,
         password_hash TEXT NOT NULL
     );
+
+-- TODO username unique

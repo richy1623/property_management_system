@@ -5,8 +5,8 @@ CREATE TABLE
         estate_id INTEGER NOT NULL,
         plot_number TEXT NOT NULL,
         phase TEXT NOT NULL,
-        length NUMERIC,
-        width NUMERIC,
+        length INTEGER NOT NULL,
+        width INTEGER NOT NULL,
         CONSTRAINT fk_estate FOREIGN KEY (estate_id) REFERENCES estate (estate_id)
     );
 

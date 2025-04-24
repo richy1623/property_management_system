@@ -74,8 +74,9 @@ diesel::table! {
         plot_id -> Int4,
         estate_id -> Int4,
         plot_number -> Text,
-        length -> Nullable<Numeric>,
-        width -> Nullable<Numeric>,
+        phase->Text,
+        length -> Int4,
+        width -> Int4,
     }
 }
 
