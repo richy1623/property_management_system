@@ -81,6 +81,7 @@ diesel::table! {
 diesel::table! {
     user (user_id) {
         user_id -> Int4,
+        user_name -> Text,
         name -> Text,
         cellphone_number -> Nullable<Text>,
         email_address -> Nullable<Text>,
