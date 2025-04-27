@@ -1,7 +1,8 @@
-use crate::schema::ownership;
-use diesel::{Insertable, Queryable, Selectable};
+use diesel::{insert_into, prelude::*};
 use diesel_derive_enum::DbEnum;
 use serde::{Deserialize, Serialize};
+
+use crate::schema::ownership;
 
 #[derive(Debug, Clone, PartialEq, Eq, DbEnum, Serialize, Deserialize)]
 #[db_enum(existing_type_path = "crate::schema::sql_types::OwnershipState")]
