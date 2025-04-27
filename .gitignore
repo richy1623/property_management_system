@@ -10,9 +10,10 @@ target/
 *.pdb
 
 # Added by cargo
-
 /target
-
 
 # IDE
 .vscode
+
+# Coverage
+tarpaulin-report.html

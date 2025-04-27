@@ -4,14 +4,19 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-diesel = { version = "2.2.10", features = ["postgres", "chrono"] }
+diesel = { version = "2.2.10", features = ["postgres", "chrono", "r2d2"] }
 diesel-derive-enum = { version = "3.0.0-beta.1", features = ["postgres"] }
+diesel_migrations = "2.2.0"
 pq-sys = { version = "0.7.1", features = ["bundled"] }
-openssl-sys = { version = "0.9.107", features = ["vendored"] } 
+openssl-sys = { version = "0.9.107", features = ["vendored"] }
 dotenvy = "0.15"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-argon2 = "0.5"
-rand_core = "0.9.3"
-password-hash = "0.5"
+# TODO Update when v6 of password hash comes out
+argon2 = { version = "0.5" }
+rand_core = { version = "0.6", features = ["getrandom"] }
+password-hash = { version = "0.5", features = ["rand_core"] }
 chrono = { version = "0.4", features = ["serde"] }
+
+[dev-dependencies]
+rstest = "0.25.0"

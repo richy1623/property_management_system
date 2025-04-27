@@ -4,7 +4,7 @@ services:
     container_name: postgres-db
     restart: always
     environment:
-      POSTGRES_USER: user
+      POSTGRES_USER: username
       POSTGRES_PASSWORD: password
       POSTGRES_DB: db
     healthcheck:

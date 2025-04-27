@@ -88,7 +88,7 @@ diesel::table! {
         name -> Text,
         cellphone_number -> Nullable<Text>,
         email_address -> Nullable<Text>,
-        nrc -> Nullable<Text>,
+        identification_number -> Nullable<Text>,
         password_hash -> Text,
     }
 }

@@ -6,6 +6,6 @@ CREATE TABLE
         name TEXT NOT NULL,
         cellphone_number TEXT,
         email_address TEXT,
-        nrc TEXT,
+        identification_number TEXT,
         password_hash TEXT NOT NULL
     );
