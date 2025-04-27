@@ -1,4 +1,4 @@
-use diesel::{insert_into, prelude::*};
+use diesel::{insert_into, prelude::*, result::Error};
 use diesel_derive_enum::DbEnum;
 use serde::{Deserialize, Serialize};
 
@@ -42,7 +42,7 @@ impl Payment {
         reference: &str,
         last_changed_by_user: i32,
         proof_of_payment_path: &str,
-    ) -> QueryResult<Payment> {
+    ) -> Result<Payment, Error> {
         insert_into(payment::table)
             .values((
                 payment::ownership_id.eq(ownership_id),
@@ -63,8 +63,9 @@ impl Payment {
         date: chrono::NaiveDate,
         amount: i32,
         reference: &str,
+        last_changed_by_user: i32,
         proof_of_payment_path: &str,
-    ) -> QueryResult<Payment> {
+    ) -> Result<Payment, Error> {
         Payment::create_payment(
             conn,
             ownership_id,
@@ -73,7 +74,7 @@ impl Payment {
             PaymentState::Pending,
             USER_SUBMITTED_PAYMENT_COMMENT,
             reference,
-            ownership_id, // TODO fix this to user_id
+            last_changed_by_user,
             proof_of_payment_path,
         )
     }

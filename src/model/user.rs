@@ -32,7 +32,7 @@ impl User {
         email_address: Option<String>,
         nrc: Option<String>,
         password: String,
-    ) -> QueryResult<User> {
+    ) -> Result<User, Error> {
         insert_into(user::table)
             .values((
                 user::name.eq(name),

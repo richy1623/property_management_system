@@ -1,4 +1,4 @@
-use diesel::{insert_into, prelude::*};
+use diesel::{insert_into, prelude::*, result::Error};
 use diesel_derive_enum::DbEnum;
 use serde::{Deserialize, Serialize};
 
@@ -35,7 +35,7 @@ impl Ownership {
         state: OwnershipState,
         total_sale_value: i32,
         monthly_repayment_amount: i32,
-    ) -> QueryResult<Ownership> {
+    ) -> Result<Ownership, Error> {
         insert_into(ownership::table)
             .values((
                 ownership::person_id.eq(person_id),
@@ -45,5 +45,12 @@ impl Ownership {
                 ownership::monthly_repayment_amount.eq(monthly_repayment_amount),
             ))
             .get_result(conn)
+    }
+
+    pub fn get_ownership(conn: &mut PgConnection, ownership_id: i32) -> Result<Ownership, Error> {
+        ownership::table
+            .find(ownership_id)
+            .select(Ownership::as_select())
+            .first(conn)
     }
 }
