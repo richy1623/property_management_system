@@ -6,7 +6,7 @@ CREATE TABLE
         payment_id SERIAL PRIMARY KEY,
         ownership_id INTEGER NOT NULL,
         date DATE NOT NULL,
-        amount NUMERIC NOT NULL,
+        amount INTEGER NOT NULL,
         state payment_state NOT NULL,
         comment TEXT NOT NULL,
         reference TEXT NOT NULL,

@@ -12,6 +12,7 @@ pub const STATIC_PASSWORD_HASH_SALT: &str = "123e4567-e89b-12d3-a456-42661417400
     Queryable, Selectable, Insertable, Debug, PartialEq, Eq, Clone, Serialize, Deserialize,
 )]
 #[diesel(table_name = user)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct User {
     pub user_id: i32,
     pub user_name: String,

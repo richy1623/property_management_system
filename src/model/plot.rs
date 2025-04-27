@@ -7,6 +7,7 @@ use crate::schema::plot;
     Queryable, Selectable, Insertable, Debug, PartialEq, Eq, Clone, Serialize, Deserialize,
 )]
 #[diesel(table_name = plot)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Plot {
     pub plot_id: i32,
     pub estate_id: i32,

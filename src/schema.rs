@@ -46,11 +46,12 @@ diesel::table! {
         payment_id -> Int4,
         ownership_id -> Int4,
         date -> Date,
-        amount -> Numeric,
+        amount -> Int4,
         state -> PaymentState,
         comment -> Text,
         reference -> Text,
         last_changed_by_user -> Int4,
+        proof_of_payment_path -> Text,
     }
 }
 
@@ -74,7 +75,7 @@ diesel::table! {
         plot_id -> Int4,
         estate_id -> Int4,
         plot_number -> Text,
-        phase->Text,
+        phase -> Text,
         length -> Int4,
         width -> Int4,
     }

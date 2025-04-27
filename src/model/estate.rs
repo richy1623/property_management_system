@@ -7,6 +7,7 @@ use crate::schema::estate;
     Queryable, Selectable, Insertable, Debug, PartialEq, Eq, Clone, Serialize, Deserialize,
 )]
 #[diesel(table_name = estate)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Estate {
     estate_id: i32,
     name: String,
