@@ -1,4 +1,4 @@
-use diesel::{Insertable, Queryable};
+use diesel::Queryable;
 use serde::{Deserialize, Serialize};
 
 use crate::model::payment::PaymentState;
@@ -9,7 +9,7 @@ pub struct PaymentAudit {
     pub payment_id: i32,
     pub previous_state: PaymentState,
     pub new_state: PaymentState,
-    pub change_timestamp: chrono::NaiveDateTime, // Use chrono for timestamp
+    pub change_timestamp: chrono::NaiveDateTime,
     pub changed_by_user: i32,
     pub comment: String,
 }

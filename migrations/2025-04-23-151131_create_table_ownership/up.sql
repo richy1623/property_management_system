@@ -12,8 +12,8 @@ CREATE TABLE
         person_id INTEGER NOT NULL,
         plot_id INTEGER NOT NULL,
         state ownership_state NOT NULL,
-        total_sale_value NUMERIC DEFAULT 0 NOT NULL,
-        monthly_repayment_amount NUMERIC DEFAULT 0 NOT NULL,
+        total_sale_value INTEGER DEFAULT 0 NOT NULL,
+        monthly_repayment_amount INTEGER DEFAULT 0 NOT NULL,
         CONSTRAINT fk_person FOREIGN KEY (person_id) REFERENCES "user" (user_id),
         CONSTRAINT fk_plot FOREIGN KEY (plot_id) REFERENCES plot (plot_id)
     );

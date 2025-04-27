@@ -33,8 +33,8 @@ diesel::table! {
         person_id -> Int4,
         plot_id -> Int4,
         state -> OwnershipState,
-        total_sale_value -> Numeric,
-        monthly_repayment_amount -> Numeric,
+        total_sale_value -> Int4,
+        monthly_repayment_amount -> Int4,
     }
 }
 
@@ -64,7 +64,7 @@ diesel::table! {
         payment_id -> Int4,
         previous_state -> PaymentState,
         new_state -> PaymentState,
-        change_date -> Timestamp,
+        change_timestamp -> Timestamp,
         changed_by_user -> Int4,
         comment -> Text,
     }
