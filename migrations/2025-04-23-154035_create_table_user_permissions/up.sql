@@ -2,10 +2,8 @@
 CREATE TYPE permission_type AS ENUM (
     'VIEW_PAYMENTS',
     'EDIT_PAYMENTS',
-    'DELETE_PAYMENTS',
     'MANAGE_USERS',
     'VIEW_REPORTS'
-    -- Add more as needed
 );
 
 CREATE TABLE
