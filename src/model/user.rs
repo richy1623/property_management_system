@@ -1,12 +1,24 @@
 use argon2::{
-    Argon2,
+    Argon2, Params,
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
 };
 use diesel::{insert_into, prelude::*, result::Error};
+use once_cell::sync::Lazy;
 use rand_core::OsRng;
 use serde::{Deserialize, Serialize};
 
 use crate::schema::user;
+
+// Create the static Argon2 instance
+static ARGON2: Lazy<Argon2> = Lazy::new(|| {
+    let params = Params::new(256, 4, Params::MIN_P_COST, None).expect("Invalid Argon2 params");
+
+    Argon2::new(
+        argon2::Algorithm::default(),
+        argon2::Version::default(),
+        params,
+    )
+});
 
 #[derive(
     Queryable, Selectable, Insertable, Debug, PartialEq, Eq, Clone, Serialize, Deserialize,
@@ -54,7 +66,7 @@ impl User {
             .filter(user::user_name.eq(user_name))
             .select(User::as_select())
             .first(conn)?;
-        match Argon2::default().verify_password(
+        match ARGON2.verify_password(
             password.as_bytes(),
             &PasswordHash::new(&user.password_hash).expect("TODO"),
         ) {
@@ -66,9 +78,8 @@ impl User {
 
     fn hash_password(password: &str) -> Result<String, password_hash::Error> {
         let salt = SaltString::generate(&mut OsRng);
-        let argon2 = Argon2::default();
 
-        let hashed = argon2.hash_password(password.as_bytes(), &salt)?;
+        let hashed = ARGON2.hash_password(password.as_bytes(), &salt)?;
         Ok(hashed.serialize().to_string())
     }
 
@@ -101,7 +112,7 @@ mod tests {
     #[fixture]
     #[once]
     pub fn pool() -> Pool<ConnectionManager<PgConnection>> {
-        crate::tests::get_test_db_connection_pool("db2")
+        crate::tests::get_test_db_connection_pool("test_user")
     }
 
     #[rstest]

@@ -616,6 +616,7 @@ dependencies = [
  "diesel-derive-enum",
  "diesel_migrations",
  "dotenvy",
+ "once_cell",
  "openssl-sys",
  "password-hash",
  "pq-sys",
