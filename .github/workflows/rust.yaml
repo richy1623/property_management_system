@@ -14,6 +14,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: username
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: db
+        ports:
+          - 5430:5432
+        options: >-
+          --health-cmd pg_isready --health-interval 1s --health-timeout 1s --health-retries 20
+
     steps:
       - uses: actions/checkout@v4
 
@@ -29,6 +41,13 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
+
+      - name: Wait for Postgres
+        run: |
+          until pg_isready -h localhost -p 5430; do
+            echo "Waiting for postgres..."
+            sleep 1
+          done
 
       - name: Run tests
         run: cargo test --verbose
