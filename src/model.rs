@@ -1,17 +1,24 @@
 pub mod estate;
 pub mod ownership;
 pub mod payment;
-pub mod payment_audit;
+pub mod payment_state_audit;
 pub mod plot;
 pub mod user;
 pub mod user_permissions;
 
 #[cfg(test)]
 mod tests {
+    use chrono::NaiveDate;
     use diesel::PgConnection;
     use uuid::Uuid;
 
-    use super::{estate::Estate, ownership::Ownership, plot::Plot, user::User};
+    use super::{
+        estate::Estate,
+        ownership::Ownership,
+        payment::{Payment, PaymentState},
+        plot::Plot,
+        user::User,
+    };
 
     pub fn create_test_user(conn: &mut PgConnection) -> User {
         User::create_user(
@@ -56,7 +63,26 @@ mod tests {
             plot.plot_id,
             super::ownership::OwnershipState::PendingContract,
             1000,
-            10,
+            100,
+        )
+        .unwrap()
+    }
+
+    pub fn create_test_payment(
+        conn: &mut PgConnection,
+        ownership: &Ownership,
+        user: &User,
+    ) -> Payment {
+        Payment::create_payment(
+            conn,
+            ownership.ownership_id,
+            NaiveDate::from_ymd_opt(2025, 09, 05).unwrap(),
+            100,
+            PaymentState::PendingApproval,
+            "comment",
+            "reference",
+            user.user_id,
+            "path/to/payment",
         )
         .unwrap()
     }

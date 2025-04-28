@@ -77,10 +77,7 @@ mod tests {
 
     use rstest::{fixture, rstest};
 
-    use crate::model::{
-        ownership::{Ownership, OwnershipState},
-        tests::create_test_ownership,
-    };
+    use crate::model::ownership::{Ownership, OwnershipState};
 
     #[fixture]
     #[once]
@@ -131,9 +128,10 @@ mod tests {
         let user = crate::model::tests::create_test_user(&mut conn);
         let user_other = crate::model::tests::create_test_user(&mut conn);
 
-        let ownership_1 = create_test_ownership(&mut conn, &plot_1, &user);
-        let ownership_2 = create_test_ownership(&mut conn, &plot_2, &user);
-        let ownership_other = create_test_ownership(&mut conn, &plot_other, &user_other);
+        let ownership_1 = crate::model::tests::create_test_ownership(&mut conn, &plot_1, &user);
+        let ownership_2 = crate::model::tests::create_test_ownership(&mut conn, &plot_2, &user);
+        let ownership_other =
+            crate::model::tests::create_test_ownership(&mut conn, &plot_other, &user_other);
 
         assert_eq!(
             Ownership::get_all_ownerships_for_user_id(&mut conn, user.user_id).unwrap(),

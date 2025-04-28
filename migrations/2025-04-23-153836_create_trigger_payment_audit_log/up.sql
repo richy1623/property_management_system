@@ -15,7 +15,7 @@ BEGIN
             NEW.payment_id,
             OLD.state,
             NEW.state,
-            NEW.last_changed_by,
+            NEW.last_changed_by_user,
             NEW.comment
         );
     END IF;

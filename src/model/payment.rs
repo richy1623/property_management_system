@@ -2,16 +2,19 @@ use diesel::{insert_into, prelude::*, result::Error};
 use diesel_derive_enum::DbEnum;
 use serde::{Deserialize, Serialize};
 
-use crate::schema::payment;
+use crate::schema::payment::{self};
 
 static USER_SUBMITTED_PAYMENT_COMMENT: &str = "User submitted payment request";
 
 #[derive(Debug, Clone, PartialEq, Eq, DbEnum, Serialize, Deserialize)]
-#[db_enum(existing_type_path = "crate::schema::sql_types::PaymentState")]
+#[db_enum(
+    existing_type_path = "crate::schema::sql_types::PaymentState",
+    value_style = "SCREAMING_SNAKE_CASE"
+)]
 pub enum PaymentState {
-    Pending,
-    Completed,
-    Failed,
+    PendingApproval,
+    Approved,
+    Declined,
 }
 
 #[derive(
@@ -71,11 +74,289 @@ impl Payment {
             ownership_id,
             date,
             amount,
-            PaymentState::Pending,
+            PaymentState::PendingApproval,
             USER_SUBMITTED_PAYMENT_COMMENT,
             reference,
             last_changed_by_user,
             proof_of_payment_path,
         )
+    }
+
+    pub fn get_payment(conn: &mut PgConnection, payment_id: i32) -> Result<Payment, Error> {
+        payment::table
+            .find(payment_id)
+            .select(Payment::as_select())
+            .first(conn)
+    }
+
+    pub fn get_all_payments_for_ownership_id(
+        conn: &mut PgConnection,
+        ownership_id: i32,
+    ) -> Result<Vec<Payment>, Error> {
+        payment::table
+            .filter(payment::ownership_id.eq(ownership_id))
+            .select(Payment::as_select())
+            .get_results(conn)
+    }
+
+    pub fn get_all_payments_in_state(
+        conn: &mut PgConnection,
+        payment_state: PaymentState,
+        offset: i64,
+        limit: i64,
+    ) -> Result<Vec<Payment>, Error> {
+        payment::table
+            .filter(payment::state.eq(payment_state))
+            .order(payment::payment_id)
+            .limit(limit)
+            .offset(offset)
+            .select(Payment::as_select())
+            .get_results(conn)
+    }
+
+    pub fn update_payment_state(
+        conn: &mut PgConnection,
+        payment_id: i32,
+        payment_state: PaymentState,
+        user_updating_state_id: i32,
+        comment: &str,
+    ) -> Result<Payment, Error> {
+        diesel::update(payment::table.filter(payment::payment_id.eq(payment_id)))
+            .set((
+                payment::state.eq(payment_state),
+                payment::last_changed_by_user.eq(user_updating_state_id),
+                payment::comment.eq(comment),
+            ))
+            .get_result(conn)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use chrono::{Local, NaiveDate};
+    use diesel::{
+        PgConnection,
+        r2d2::{ConnectionManager, Pool},
+    };
+
+    use rstest::{fixture, rstest};
+
+    use crate::model::{
+        payment::{Payment, PaymentState},
+        payment_state_audit::PaymentStateAudit,
+    };
+
+    #[fixture]
+    #[once]
+    pub fn pool() -> Pool<ConnectionManager<PgConnection>> {
+        crate::tests::get_test_db_connection_pool("test_payment")
+    }
+
+    #[rstest]
+    pub fn test_create_payment(pool: &Pool<ConnectionManager<PgConnection>>) {
+        let mut conn = pool.clone().get().unwrap();
+
+        let estate = crate::model::tests::create_test_estate(&mut conn);
+        let plot = crate::model::tests::create_test_plot(&mut conn, &estate);
+        let user = crate::model::tests::create_test_user(&mut conn);
+        let ownership = crate::model::tests::create_test_ownership(&mut conn, &plot, &user);
+
+        let date = NaiveDate::from_ymd_opt(2025, 09, 05).unwrap();
+
+        let payment = Payment::create_payment(
+            &mut conn,
+            ownership.ownership_id,
+            date,
+            100,
+            PaymentState::Declined,
+            "comment",
+            "reference",
+            user.user_id,
+            "path/to/payment",
+        )
+        .unwrap();
+
+        assert_eq!(payment.ownership_id, ownership.ownership_id);
+        assert_eq!(payment.date, date);
+        assert_eq!(payment.amount, 100);
+        assert_eq!(payment.state, PaymentState::Declined);
+        assert_eq!(payment.comment, "comment");
+        assert_eq!(payment.reference, "reference");
+        assert_eq!(payment.last_changed_by_user, user.user_id);
+        assert_eq!(payment.proof_of_payment_path, "path/to/payment");
+
+        assert_eq!(
+            payment,
+            Payment::get_payment(&mut conn, payment.payment_id).unwrap()
+        );
+    }
+
+    #[rstest]
+    pub fn test_update_payment_state(pool: &Pool<ConnectionManager<PgConnection>>) {
+        let mut conn = pool.clone().get().unwrap();
+
+        let estate = crate::model::tests::create_test_estate(&mut conn);
+        let plot = crate::model::tests::create_test_plot(&mut conn, &estate);
+        let user_1 = crate::model::tests::create_test_user(&mut conn);
+        let user_2 = crate::model::tests::create_test_user(&mut conn);
+        let ownership = crate::model::tests::create_test_ownership(&mut conn, &plot, &user_1);
+
+        let payment_1 = crate::model::tests::create_test_payment(&mut conn, &ownership, &user_1);
+        let payment_2 = crate::model::tests::create_test_payment(&mut conn, &ownership, &user_1);
+
+        let updated_payment = Payment::update_payment_state(
+            &mut conn,
+            payment_1.payment_id,
+            PaymentState::Declined,
+            user_2.user_id,
+            "new comment",
+        )
+        .unwrap();
+
+        // Check payment changed
+        assert_eq!(updated_payment.state, PaymentState::Declined);
+        assert_eq!(updated_payment.last_changed_by_user, user_2.user_id);
+        assert_eq!(updated_payment.comment, "new comment");
+
+        // Check updated in db
+        assert_eq!(
+            updated_payment,
+            Payment::get_payment(&mut conn, payment_1.payment_id).unwrap()
+        );
+        assert_ne!(
+            payment_1,
+            Payment::get_payment(&mut conn, payment_1.payment_id).unwrap()
+        );
+        // Check only effected expected entry
+        assert_eq!(
+            payment_2,
+            Payment::get_payment(&mut conn, payment_2.payment_id).unwrap()
+        );
+
+        // Check updated the payment audit log
+        let payment_state_audits = PaymentStateAudit::get_all_payment_state_audits_for_payment_id(
+            &mut conn,
+            payment_1.payment_id,
+        )
+        .unwrap();
+        assert_eq!(payment_state_audits.len(), 1);
+        let payment_state_audit = &payment_state_audits[0];
+        assert_eq!(payment_state_audit.changed_by_user, user_2.user_id);
+        assert_eq!(
+            payment_state_audit.previous_state,
+            PaymentState::PendingApproval
+        );
+        assert_eq!(payment_state_audit.new_state, PaymentState::Declined);
+        assert_eq!(
+            payment_state_audit.change_timestamp.date(),
+            Local::now().date_naive()
+        );
+        assert_eq!(payment_state_audit.comment, "new comment");
+    }
+
+    #[rstest]
+    pub fn test_get_all_ownerships_for_user_id(pool: &Pool<ConnectionManager<PgConnection>>) {
+        let mut conn = pool.clone().get().unwrap();
+
+        let estate = crate::model::tests::create_test_estate(&mut conn);
+
+        let plot_1 = crate::model::tests::create_test_plot(&mut conn, &estate);
+        let plot_2 = crate::model::tests::create_test_plot(&mut conn, &estate);
+
+        let user_1 = crate::model::tests::create_test_user(&mut conn);
+        let user_2 = crate::model::tests::create_test_user(&mut conn);
+
+        let ownership_1 = crate::model::tests::create_test_ownership(&mut conn, &plot_1, &user_1);
+        let ownership_2 = crate::model::tests::create_test_ownership(&mut conn, &plot_2, &user_2);
+
+        let payment_1 = crate::model::tests::create_test_payment(&mut conn, &ownership_1, &user_1);
+        let payment_2 = crate::model::tests::create_test_payment(&mut conn, &ownership_1, &user_1);
+        let payment_3 = crate::model::tests::create_test_payment(&mut conn, &ownership_2, &user_2);
+
+        assert_eq!(
+            Payment::get_all_payments_for_ownership_id(&mut conn, ownership_1.ownership_id)
+                .unwrap(),
+            vec![payment_1, payment_2]
+        );
+        assert_eq!(
+            Payment::get_all_payments_for_ownership_id(&mut conn, ownership_2.ownership_id)
+                .unwrap(),
+            vec![payment_3]
+        );
+    }
+
+    #[rstest]
+    pub fn test_get_all_payments_in_state(pool: &Pool<ConnectionManager<PgConnection>>) {
+        let mut conn = pool.clone().get().unwrap();
+
+        let estate = crate::model::tests::create_test_estate(&mut conn);
+
+        let plot = crate::model::tests::create_test_plot(&mut conn, &estate);
+
+        let user = crate::model::tests::create_test_user(&mut conn);
+
+        let ownership = crate::model::tests::create_test_ownership(&mut conn, &plot, &user);
+
+        let payment_1 = crate::model::tests::create_test_payment(&mut conn, &ownership, &user);
+        let payment_1 = Payment::update_payment_state(
+            &mut conn,
+            payment_1.payment_id,
+            PaymentState::Approved,
+            user.user_id,
+            "comment",
+        )
+        .unwrap();
+        let payment_2 = crate::model::tests::create_test_payment(&mut conn, &ownership, &user);
+        let payment_2 = Payment::update_payment_state(
+            &mut conn,
+            payment_2.payment_id,
+            PaymentState::Approved,
+            user.user_id,
+            "comment",
+        )
+        .unwrap();
+        let payment_3 = crate::model::tests::create_test_payment(&mut conn, &ownership, &user);
+        let payment_3 = Payment::update_payment_state(
+            &mut conn,
+            payment_3.payment_id,
+            PaymentState::Declined,
+            user.user_id,
+            "comment",
+        )
+        .unwrap();
+
+        let payments =
+            Payment::get_all_payments_in_state(&mut conn, PaymentState::Approved, 0, 10).unwrap();
+        assert!(payments.contains(&payment_1));
+        assert!(payments.contains(&payment_2));
+        assert!(!payments.contains(&payment_3));
+
+        let payments =
+            Payment::get_all_payments_in_state(&mut conn, PaymentState::Approved, 0, 1).unwrap();
+        assert!(
+            payments.contains(&payment_1),
+            "Expected: {}. Contains: {:?}",
+            payment_1.payment_id,
+            payments
+        );
+        assert!(!payments.contains(&payment_2));
+        assert!(!payments.contains(&payment_3));
+
+        let payments =
+            Payment::get_all_payments_in_state(&mut conn, PaymentState::Approved, 1, 1).unwrap();
+        assert!(!payments.contains(&payment_1));
+        assert!(payments.contains(&payment_2));
+        assert!(!payments.contains(&payment_3));
+
+        assert_eq!(
+            Payment::get_all_payments_in_state(&mut conn, PaymentState::Approved, 1000, 1).unwrap(),
+            vec![]
+        );
+
+        let payments =
+            Payment::get_all_payments_in_state(&mut conn, PaymentState::Declined, 0, 10).unwrap();
+        assert!(!payments.contains(&payment_1));
+        assert!(!payments.contains(&payment_2));
+        assert!(payments.contains(&payment_3));
     }
 }
