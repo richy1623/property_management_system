@@ -21,7 +21,7 @@ impl Estate {
         estate::table.load::<Estate>(conn)
     }
 
-    pub fn add_estate(
+    pub fn create_estate(
         conn: &mut PgConnection,
         name: &str,
         location: &str,
@@ -43,5 +43,62 @@ impl Estate {
             .find(estate_id)
             .select(Estate::as_select())
             .first(conn)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use diesel::{
+        PgConnection,
+        r2d2::{ConnectionManager, Pool},
+    };
+
+    use rstest::{fixture, rstest};
+
+    use crate::model::estate::Estate;
+
+    #[fixture]
+    #[once]
+    pub fn pool() -> Pool<ConnectionManager<PgConnection>> {
+        crate::tests::get_test_db_connection_pool("test_estate")
+    }
+
+    #[rstest]
+    pub fn test_create_estate(pool: &Pool<ConnectionManager<PgConnection>>) {
+        let mut conn = pool.clone().get().unwrap();
+
+        let estate =
+            Estate::create_estate(&mut conn, "estate_1", "location", "district", "landmark")
+                .unwrap();
+
+        assert_eq!(estate.name, "estate_1");
+        assert_eq!(estate.location, "location");
+        assert_eq!(estate.district, "district");
+        assert_eq!(estate.landmark, "landmark");
+
+        assert_eq!(
+            estate,
+            Estate::get_estate(&mut conn, estate.estate_id).unwrap()
+        );
+    }
+
+    #[rstest]
+    pub fn test_get_all_estates(pool: &Pool<ConnectionManager<PgConnection>>) {
+        let mut conn = pool.clone().get().unwrap();
+
+        let estate_1 =
+            Estate::create_estate(&mut conn, "estate_a1", "location", "district", "landmark")
+                .unwrap();
+        let estate_2 =
+            Estate::create_estate(&mut conn, "estate_a2", "location", "district", "landmark")
+                .unwrap();
+        let estate_3 =
+            Estate::create_estate(&mut conn, "estate_a3", "location", "district", "landmark")
+                .unwrap();
+
+        let all_estates = Estate::get_all_estates(&mut conn).unwrap();
+        assert!(all_estates.contains(&estate_1));
+        assert!(all_estates.contains(&estate_2));
+        assert!(all_estates.contains(&estate_3));
     }
 }
