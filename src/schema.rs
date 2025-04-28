@@ -30,7 +30,7 @@ diesel::table! {
 
     ownership (ownership_id) {
         ownership_id -> Int4,
-        person_id -> Int4,
+        user_id -> Int4,
         plot_id -> Int4,
         state -> OwnershipState,
         total_sale_value -> Int4,
@@ -104,7 +104,7 @@ diesel::table! {
 }
 
 diesel::joinable!(ownership -> plot (plot_id));
-diesel::joinable!(ownership -> user (person_id));
+diesel::joinable!(ownership -> user (user_id));
 diesel::joinable!(payment -> ownership (ownership_id));
 diesel::joinable!(payment -> user (last_changed_by_user));
 diesel::joinable!(payment_state_audit -> payment (payment_id));

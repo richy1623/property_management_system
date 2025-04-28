@@ -153,16 +153,7 @@ mod tests {
     fn test_find_user_by_id(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.clone().get().unwrap();
 
-        let user = User::create_user(
-            &mut conn,
-            "user_2",
-            "name",
-            Some("0721234567"),
-            Some("email@noreply.com"),
-            Some("id_number"),
-            "password",
-        )
-        .unwrap();
+        let user = crate::model::tests::create_test_user(&mut conn);
 
         assert_eq!(
             user,
@@ -176,16 +167,7 @@ mod tests {
     fn test_find_user_by_user_name(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.clone().get().unwrap();
 
-        let user = User::create_user(
-            &mut conn,
-            "user_3",
-            "name",
-            Some("0721234567"),
-            Some("email@noreply.com"),
-            Some("id_number"),
-            "password",
-        )
-        .unwrap();
+        let user = crate::model::tests::create_test_user(&mut conn);
 
         assert_eq!(
             user,
@@ -199,16 +181,7 @@ mod tests {
     fn test_validate_login(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.clone().get().unwrap();
 
-        let user = User::create_user(
-            &mut conn,
-            "user_4",
-            "name",
-            Some("0721234567"),
-            Some("email@noreply.com"),
-            Some("id_number"),
-            "password",
-        )
-        .unwrap();
+        let user = crate::model::tests::create_test_user(&mut conn);
 
         assert_eq!(
             User::validate_login(&mut conn, &user.user_name, "password"),

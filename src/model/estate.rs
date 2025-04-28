@@ -86,15 +86,9 @@ mod tests {
     pub fn test_get_all_estates(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.clone().get().unwrap();
 
-        let estate_1 =
-            Estate::create_estate(&mut conn, "estate_a1", "location", "district", "landmark")
-                .unwrap();
-        let estate_2 =
-            Estate::create_estate(&mut conn, "estate_a2", "location", "district", "landmark")
-                .unwrap();
-        let estate_3 =
-            Estate::create_estate(&mut conn, "estate_a3", "location", "district", "landmark")
-                .unwrap();
+        let estate_1 = crate::model::tests::create_test_estate(&mut conn);
+        let estate_2 = crate::model::tests::create_test_estate(&mut conn);
+        let estate_3 = crate::model::tests::create_test_estate(&mut conn);
 
         let all_estates = Estate::get_all_estates(&mut conn).unwrap();
         assert!(all_estates.contains(&estate_1));

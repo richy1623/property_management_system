@@ -99,12 +99,8 @@ mod tests {
     ) {
         let mut conn = pool.clone().get().unwrap();
 
-        let estate_1 =
-            Estate::create_estate(&mut conn, "estate_2-1", "location", "district", "landmark")
-                .unwrap();
-        let estate_2 =
-            Estate::create_estate(&mut conn, "estate_2-2", "location", "district", "landmark")
-                .unwrap();
+        let estate_1 = crate::model::tests::create_test_estate(&mut conn);
+        let estate_2 = crate::model::tests::create_test_estate(&mut conn);
 
         let plot_1 =
             Plot::create_plot(&mut conn, estate_1.estate_id, "P1", "phase 1", 30, 40).unwrap();
