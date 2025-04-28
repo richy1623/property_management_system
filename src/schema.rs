@@ -97,7 +97,7 @@ diesel::table! {
     use diesel::sql_types::*;
     use super::sql_types::PermissionType;
 
-    user_permissions (user_id, permission) {
+    user_permission (user_id, permission) {
         user_id -> Int4,
         permission -> PermissionType,
     }
@@ -110,7 +110,7 @@ diesel::joinable!(payment -> user (last_changed_by_user));
 diesel::joinable!(payment_state_audit -> payment (payment_id));
 diesel::joinable!(payment_state_audit -> user (changed_by_user));
 diesel::joinable!(plot -> estate (estate_id));
-diesel::joinable!(user_permissions -> user (user_id));
+diesel::joinable!(user_permission -> user (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     estate,
@@ -119,5 +119,5 @@ diesel::allow_tables_to_appear_in_same_query!(
     payment_state_audit,
     plot,
     user,
-    user_permissions,
+    user_permission,
 );

@@ -4,7 +4,7 @@ pub mod payment;
 pub mod payment_state_audit;
 pub mod plot;
 pub mod user;
-pub mod user_permissions;
+pub mod user_permission;
 
 #[cfg(test)]
 mod tests {
@@ -18,6 +18,7 @@ mod tests {
         payment::{Payment, PaymentState},
         plot::Plot,
         user::User,
+        user_permission::{PermissionType, UserPermission},
     };
 
     pub fn create_test_user(conn: &mut PgConnection) -> User {
@@ -83,6 +84,20 @@ mod tests {
             "reference",
             user.user_id,
             "path/to/payment",
+        )
+        .unwrap()
+    }
+
+    pub fn grant_user_all_permissions(conn: &mut PgConnection, user: &User) -> Vec<PermissionType> {
+        UserPermission::set_user_permission(
+            conn,
+            user.user_id,
+            vec![
+                PermissionType::ViewPayments,
+                PermissionType::EditPayments,
+                PermissionType::ManageUsers,
+                PermissionType::ViewReports,
+            ],
         )
         .unwrap()
     }

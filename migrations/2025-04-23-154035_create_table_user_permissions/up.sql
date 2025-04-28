@@ -7,11 +7,11 @@ CREATE TYPE permission_type AS ENUM (
 );
 
 CREATE TABLE
-    user_permissions (
+    user_permission (
         user_id INTEGER NOT NULL,
         permission permission_type NOT NULL,
         PRIMARY KEY (user_id, permission),
-        CONSTRAINT fk_user_permissions_user FOREIGN KEY (user_id) REFERENCES "user" (user_id)
+        CONSTRAINT fk_user_permission_user FOREIGN KEY (user_id) REFERENCES "user" (user_id)
     );
 
-CREATE INDEX idx__user_permissions__user_id ON user_permissions (user_id);
+CREATE INDEX idx__user_permission__user_id ON user_permission (user_id);
