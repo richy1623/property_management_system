@@ -9,11 +9,11 @@ use crate::schema::estate;
 #[diesel(table_name = estate)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Estate {
-    estate_id: i32,
-    name: String,
-    location: String,
-    district: String,
-    landmark: String,
+    pub estate_id: i32,
+    pub name: String,
+    pub location: String,
+    pub district: String,
+    pub landmark: String,
 }
 
 impl Estate {
