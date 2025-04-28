@@ -142,7 +142,7 @@ mod tests {
     use rstest::{fixture, rstest};
 
     use crate::model::{
-        payment::{Payment, PaymentState},
+        payment::{Payment, PaymentState, USER_SUBMITTED_PAYMENT_COMMENT},
         payment_state_audit::PaymentStateAudit,
     };
 
@@ -358,5 +358,37 @@ mod tests {
         assert!(!payments.contains(&payment_1));
         assert!(!payments.contains(&payment_2));
         assert!(payments.contains(&payment_3));
+    }
+
+    #[rstest]
+    pub fn test_create_user_payment(pool: &Pool<ConnectionManager<PgConnection>>) {
+        let mut conn = pool.clone().get().unwrap();
+
+        let estate = crate::model::tests::create_test_estate(&mut conn);
+        let plot = crate::model::tests::create_test_plot(&mut conn, &estate);
+        let user = crate::model::tests::create_test_user(&mut conn);
+        let ownership = crate::model::tests::create_test_ownership(&mut conn, &plot, &user);
+
+        let date = NaiveDate::from_ymd_opt(2025, 09, 05).unwrap();
+
+        let payment = Payment::create_user_payment(
+            &mut conn,
+            ownership.ownership_id,
+            date,
+            100,
+            "reference",
+            user.user_id,
+            "path",
+        )
+        .unwrap();
+
+        assert_eq!(payment.ownership_id, ownership.ownership_id);
+        assert_eq!(payment.date, date);
+        assert_eq!(payment.amount, 100);
+        assert_eq!(payment.state, PaymentState::PendingApproval);
+        assert_eq!(payment.comment, USER_SUBMITTED_PAYMENT_COMMENT);
+        assert_eq!(payment.reference, "reference");
+        assert_eq!(payment.last_changed_by_user, user.user_id);
+        assert_eq!(payment.proof_of_payment_path, "path");
     }
 }
