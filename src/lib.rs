@@ -1,5 +1,6 @@
 pub mod model;
 mod schema;
+pub mod service;
 
 use diesel::prelude::*;
 use diesel::r2d2::ConnectionManager;
