@@ -1,3 +1,5 @@
+use tonic::{Code, Status};
+
 pub mod estate;
 pub mod ownership;
 pub mod payment;
@@ -9,6 +11,7 @@ pub mod user_permission;
 pub enum Error {
     DatabaseError(diesel::result::Error),
     CryptographyError(password_hash::Error),
+    AuthorizationError, //TODO evaluate this later
 }
 
 impl From<diesel::result::Error> for Error {
@@ -23,7 +26,47 @@ impl From<password_hash::Error> for Error {
     }
 }
 
-impl Error {}
+impl Error {
+    pub fn to_status(&self) -> Status {
+        match self {
+            Error::DatabaseError(diesel_err) => match diesel_err {
+                diesel::result::Error::NotFound => {
+                    Status::new(Code::NotFound, "Resource not found")
+                }
+                diesel::result::Error::DatabaseError(kind, info) => match kind {
+                    diesel::result::DatabaseErrorKind::UniqueViolation => {
+                        Status::new(Code::AlreadyExists, "Duplicate entry")
+                    }
+                    diesel::result::DatabaseErrorKind::UnableToSendCommand
+                    | diesel::result::DatabaseErrorKind::ClosedConnection => {
+                        Status::new(Code::Unavailable, "Database connection issue")
+                    }
+                    _ => Status::new(
+                        Code::Internal,
+                        format!("Database error: {}", info.message()),
+                    ),
+                },
+                diesel::result::Error::BrokenTransactionManager => Status::new(
+                    Code::Unavailable,
+                    "Broken Transaction Manager, likely dur to database connection issue",
+                ),
+                _ => Status::new(
+                    Code::Internal,
+                    format!("Unhandled database error: {}", diesel_err),
+                ),
+            },
+            Error::CryptographyError(crypto_err) => match crypto_err {
+                password_hash::Error::Password => {
+                    Status::new(Code::PermissionDenied, "Invalid password")
+                }
+                _ => Status::new(Code::Internal, "Internal cryptographic error"),
+            },
+            Error::AuthorizationError => {
+                Status::new(Code::PermissionDenied, "Resource authentication not met")
+            }
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
