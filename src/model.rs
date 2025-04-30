@@ -6,6 +6,25 @@ pub mod plot;
 pub mod user;
 pub mod user_permission;
 
+pub enum Error {
+    DatabaseError(diesel::result::Error),
+    CryptographyError(password_hash::Error),
+}
+
+impl From<diesel::result::Error> for Error {
+    fn from(err: diesel::result::Error) -> Self {
+        Error::DatabaseError(err)
+    }
+}
+
+impl From<password_hash::Error> for Error {
+    fn from(err: password_hash::Error) -> Self {
+        Error::CryptographyError(err)
+    }
+}
+
+impl Error {}
+
 #[cfg(test)]
 mod tests {
     use chrono::NaiveDate;
