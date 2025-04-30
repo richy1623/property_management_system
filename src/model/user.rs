@@ -2,12 +2,14 @@ use argon2::{
     Argon2, Params,
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
 };
-use diesel::{insert_into, prelude::*, result::Error};
+use diesel::{insert_into, prelude::*};
 use once_cell::sync::Lazy;
 use rand_core::OsRng;
 use serde::{Deserialize, Serialize};
 
 use crate::schema::user;
+
+use super::Error;
 
 // Create the static Argon2 instance
 static ARGON2: Lazy<Argon2> = Lazy::new(|| {
@@ -55,25 +57,24 @@ impl User {
                 user::password_hash.eq(User::hash_password(&password).expect("TODO")),
             ))
             .get_result(conn)
+            .map_err(Into::into)
     }
 
     pub fn validate_login(
         conn: &mut PgConnection,
         user_name: &str,
         password: &str,
-    ) -> Result<bool, Error> {
+    ) -> Result<(), Error> {
         let user: User = user::table
             .filter(user::user_name.eq(user_name))
             .select(User::as_select())
             .first(conn)?;
-        match ARGON2.verify_password(
-            password.as_bytes(),
-            &PasswordHash::new(&user.password_hash).expect("TODO"),
-        ) {
-            Ok(_) => Ok(true),
-            Err(password_hash::Error::Password) => Ok(false),
-            _ => Err(crate::model::user::Error::BrokenTransactionManager),
-        }
+        ARGON2
+            .verify_password(
+                password.as_bytes(),
+                &PasswordHash::new(&user.password_hash)?,
+            )
+            .map_err(Into::into)
     }
 
     fn hash_password(password: &str) -> Result<String, password_hash::Error> {
@@ -88,6 +89,7 @@ impl User {
             .filter(user::user_name.eq(user_name))
             .select(User::as_select())
             .first(conn)
+            .map_err(Into::into)
     }
 
     pub fn get_user_by_user_id(conn: &mut PgConnection, user_id: i32) -> Result<User, Error> {
@@ -95,6 +97,7 @@ impl User {
             .find(user_id)
             .select(User::as_select())
             .first(conn)
+            .map_err(Into::into)
     }
 }
 
@@ -107,7 +110,7 @@ mod tests {
 
     use rstest::{fixture, rstest};
 
-    use crate::model::user::User;
+    use crate::model::{Error, user::User};
 
     #[fixture]
     #[once]
@@ -183,14 +186,11 @@ mod tests {
 
         let user = crate::model::tests::create_test_user(&mut conn);
 
-        assert_eq!(
-            User::validate_login(&mut conn, &user.user_name, "password"),
-            Ok(true),
-        );
+        assert!(User::validate_login(&mut conn, &user.user_name, "password").is_ok());
 
         assert_eq!(
-            User::validate_login(&mut conn, &user.user_name, "password2"),
-            Ok(false),
+            User::validate_login(&mut conn, &user.user_name, "password2").unwrap_err(),
+            Error::CryptographyError(password_hash::Error::Password),
         );
 
         assert!(User::validate_login(&mut conn, "no_such_user", "password").is_err());

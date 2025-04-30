@@ -8,6 +8,7 @@ pub mod plot;
 pub mod user;
 pub mod user_permission;
 
+#[derive(Debug, PartialEq)]
 pub enum Error {
     DatabaseError(diesel::result::Error),
     CryptographyError(password_hash::Error),
