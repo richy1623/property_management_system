@@ -1,6 +1,8 @@
+pub mod jwt;
 pub mod model;
-mod schema;
 pub mod service;
+
+mod schema;
 
 use diesel::prelude::*;
 use diesel::r2d2::ConnectionManager;
