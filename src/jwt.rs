@@ -91,7 +91,7 @@ impl ClaimsBuilder {
     pub fn build(self) -> Claims {
         let now = jsonwebtoken::get_current_timestamp();
 
-        let exp = 5000000000;
+        let exp = now + self.expiry_duration.as_secs();
         let iat = now;
 
         Claims {
@@ -167,7 +167,7 @@ mod tests {
         assert_eq!(token_data.claims.sub, "user_1");
         assert_eq!(token_data.claims.permissions, vec!["test", "other"]);
         assert_eq!(token_data.claims.iat, 1746563725);
-        assert_eq!(token_data.claims.exp, 5000000000 );
+        assert_eq!(token_data.claims.exp, 5000000000);
     }
 
     #[test]
