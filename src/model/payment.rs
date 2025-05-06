@@ -14,7 +14,7 @@ static USER_SUBMITTED_PAYMENT_COMMENT: &str = "User submitted payment request";
 pub enum PaymentState {
     PendingApproval,
     Approved,
-    Declined,
+    Rejected,
 }
 
 #[derive(
@@ -168,7 +168,7 @@ mod tests {
             ownership.ownership_id,
             date,
             100,
-            PaymentState::Declined,
+            PaymentState::Rejected,
             "comment",
             "reference",
             user.user_id,
@@ -179,7 +179,7 @@ mod tests {
         assert_eq!(payment.ownership_id, ownership.ownership_id);
         assert_eq!(payment.date, date);
         assert_eq!(payment.amount, 100);
-        assert_eq!(payment.state, PaymentState::Declined);
+        assert_eq!(payment.state, PaymentState::Rejected);
         assert_eq!(payment.comment, "comment");
         assert_eq!(payment.reference, "reference");
         assert_eq!(payment.last_changed_by_user, user.user_id);
@@ -207,14 +207,14 @@ mod tests {
         let updated_payment = Payment::update_payment_state(
             &mut conn,
             payment_1.payment_id,
-            PaymentState::Declined,
+            PaymentState::Rejected,
             user_2.user_id,
             "new comment",
         )
         .unwrap();
 
         // Check payment changed
-        assert_eq!(updated_payment.state, PaymentState::Declined);
+        assert_eq!(updated_payment.state, PaymentState::Rejected);
         assert_eq!(updated_payment.last_changed_by_user, user_2.user_id);
         assert_eq!(updated_payment.comment, "new comment");
 
@@ -246,7 +246,7 @@ mod tests {
             payment_state_audit.previous_state,
             PaymentState::PendingApproval
         );
-        assert_eq!(payment_state_audit.new_state, PaymentState::Declined);
+        assert_eq!(payment_state_audit.new_state, PaymentState::Rejected);
         assert_eq!(
             payment_state_audit.change_timestamp.date(),
             Local::now().date_naive()
@@ -319,7 +319,7 @@ mod tests {
         let payment_3 = Payment::update_payment_state(
             &mut conn,
             payment_3.payment_id,
-            PaymentState::Declined,
+            PaymentState::Rejected,
             user.user_id,
             "comment",
         )
@@ -354,7 +354,7 @@ mod tests {
         );
 
         let payments =
-            Payment::get_all_payments_in_state(&mut conn, PaymentState::Declined, 0, 10).unwrap();
+            Payment::get_all_payments_in_state(&mut conn, PaymentState::Rejected, 0, 10).unwrap();
         assert!(!payments.contains(&payment_1));
         assert!(!payments.contains(&payment_2));
         assert!(payments.contains(&payment_3));

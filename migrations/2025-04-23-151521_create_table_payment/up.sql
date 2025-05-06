@@ -1,5 +1,5 @@
 -- Your SQL goes here
-CREATE TYPE payment_state AS ENUM ('PENDING_APPROVAL', 'APPROVED', 'DECLINED');
+CREATE TYPE payment_state AS ENUM ('PENDING_APPROVAL', 'APPROVED', 'REJECTED');
 
 CREATE TABLE
     payment (

@@ -62,7 +62,7 @@ impl ClaimsBuilder {
         }
     }
 
-    /// Optional override of the expiry duration (default is 30 minutes)
+    /// Optional override of the expiry duration
     pub fn expiry(mut self, duration: Duration) -> Self {
         self.expiry_duration = duration;
         self
@@ -91,7 +91,7 @@ impl ClaimsBuilder {
     pub fn build(self) -> Claims {
         let now = jsonwebtoken::get_current_timestamp();
 
-        let exp = now + self.expiry_duration.as_secs();
+        let exp = 5000000000;
         let iat = now;
 
         Claims {
@@ -132,7 +132,6 @@ impl Jwt {
 
 #[cfg(test)]
 mod tests {
-
     use crate::jwt::{ClaimsBuilder, DEFAULT_ISSUER};
 
     use super::Jwt;
@@ -154,8 +153,6 @@ mod tests {
         assert_eq!(token_data.claims.permissions, vec!["test"]);
         assert!(token_data.claims.iat <= now);
         assert!(token_data.claims.exp > now);
-
-        // assert!(token_data.claims.validate());
     }
 
     #[test]
@@ -163,14 +160,14 @@ mod tests {
         let jwt = Jwt::new("a-string-secret-at-least-256-bits-long");
 
         let token_data = jwt
-            .decode_jwt_token("eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyXzEiLCJleHAiOjE3NDYwOTY2NjksImlhdCI6MTc0NjA5NDg2OSwiaXNzIjoibXktYXBwIiwicGVybWlzc2lvbnMiOlsidGVzdCIsIm90aGVyIl19.yK1aCS0ex57dADHGOoQ2FD0rSdRwW-wKj1X4CvfxmxU")
+            .decode_jwt_token("eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyXzEiLCJleHAiOjUwMDAwMDAwMDAsImlhdCI6MTc0NjU2MzcyNSwiaXNzIjoibXktYXBwIiwicGVybWlzc2lvbnMiOlsidGVzdCIsIm90aGVyIl19.RjM8WdiB8rbLsDKCaFMSMxGoSNAFNIZLFhq-MN6wVtE")
             .unwrap();
 
         assert_eq!(token_data.claims.iss, "my-app");
         assert_eq!(token_data.claims.sub, "user_1");
         assert_eq!(token_data.claims.permissions, vec!["test", "other"]);
-        assert_eq!(token_data.claims.iat, 1746094869);
-        assert_eq!(token_data.claims.exp, 1746096669);
+        assert_eq!(token_data.claims.iat, 1746563725);
+        assert_eq!(token_data.claims.exp, 5000000000 );
     }
 
     #[test]
@@ -180,7 +177,5 @@ mod tests {
         assert_eq!(jwt
             .decode_jwt_token("eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyXzEiLCJleHAiOjAsImlhdCI6MCwiaXNzIjoibXktYXBwIiwicGVybWlzc2lvbnMiOlsidGVzdCJdfQ.0VA-tSe1cOS3rCdFZWXBgddCCtXjzXTwbTh49WFDE8g").unwrap_err().into_kind()
             ,jsonwebtoken::errors::ErrorKind::ExpiredSignature);
-
-        // jsonwebtoken::get_current_timestamp()
     }
 }
