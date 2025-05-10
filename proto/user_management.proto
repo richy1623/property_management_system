@@ -3,7 +3,7 @@ package user_management;
 
 service UserManagement {
     rpc CreateUser (UserCreationRequest) returns (UserCreationResponse);
-    rpc LoginUser (UserLoginRequest) returns (UserLoginToken);
+    rpc LoginUser (UserLoginRequest) returns (UserLoginResponse);
 }
 
 message UserCreationRequest {
@@ -24,6 +24,6 @@ message UserLoginRequest {
     string password = 2;
 }
 
-message UserLoginToken {
+message UserLoginResponse {
     string jwt_token = 1;
 }

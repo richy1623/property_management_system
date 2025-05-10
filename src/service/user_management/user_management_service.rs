@@ -8,7 +8,7 @@ use tonic::{Request, Response, Status};
 use crate::{MIGRATIONS, model::user::User};
 
 use super::user_management_proto::{
-    UserCreationRequest, UserCreationResponse, UserLoginRequest, UserLoginToken,
+    UserCreationRequest, UserCreationResponse, UserLoginRequest, UserLoginResponse,
     user_management_server::UserManagement,
 };
 
@@ -69,7 +69,7 @@ impl UserManagement for UserManagementService {
     async fn login_user(
         &self,
         request: Request<UserLoginRequest>,
-    ) -> Result<Response<UserLoginToken>, Status> {
+    ) -> Result<Response<UserLoginResponse>, Status> {
         println!("{:?}", request);
         let mut conn = match self.database_connection_pool.clone().get() {
             Ok(conn) => conn,
@@ -79,7 +79,7 @@ impl UserManagement for UserManagementService {
         let request = request.get_ref();
 
         match User::validate_login(&mut conn, &request.user_name, &request.password) {
-            Ok(_) => Ok(Response::new(UserLoginToken {
+            Ok(_) => Ok(Response::new(UserLoginResponse {
                 // TODO JWT
                 jwt_token: "token".to_string(),
             })),
