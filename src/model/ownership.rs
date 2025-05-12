@@ -63,10 +63,8 @@ impl Ownership {
         plot_id: i32,
     ) -> Result<Ownership, Error> {
         ownership::table
-            .filter((
-                ownership::user_id.eq(user_id),
-                ownership::plot_id.eq(plot_id),
-            ))
+            .filter(ownership::user_id.eq(user_id))
+            .filter(ownership::plot_id.eq(plot_id))
             .select(Ownership::as_select())
             .first(conn)
     }
@@ -157,7 +155,7 @@ mod tests {
 
         assert_eq!(
             Ownership::get_ownership_for_user_and_plot(&mut conn, -1, -1).unwrap_err(),
-            NotFound
+            diesel::result::Error::NotFound
         );
     }
 
