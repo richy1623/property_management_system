@@ -57,6 +57,20 @@ impl Ownership {
             .first(conn)
     }
 
+    pub fn get_ownership_for_user_and_plot(
+        conn: &mut PgConnection,
+        user_id: i32,
+        plot_id: i32,
+    ) -> Result<Ownership, Error> {
+        ownership::table
+            .filter((
+                ownership::user_id.eq(user_id),
+                ownership::plot_id.eq(plot_id),
+            ))
+            .select(Ownership::as_select())
+            .first(conn)
+    }
+
     pub fn get_all_ownerships_for_user_id(
         conn: &mut PgConnection,
         user_id: i32,
@@ -112,6 +126,38 @@ mod tests {
         assert_eq!(
             ownership,
             Ownership::get_ownership(&mut conn, ownership.ownership_id).unwrap()
+        );
+    }
+
+    #[rstest]
+    pub fn test_get_ownership_for_user_and_plot(pool: &Pool<ConnectionManager<PgConnection>>) {
+        let mut conn = pool.clone().get().unwrap();
+
+        let estate = crate::model::tests::create_test_estate(&mut conn);
+
+        let plot_1 = crate::model::tests::create_test_plot(&mut conn, &estate);
+        let plot_2 = crate::model::tests::create_test_plot(&mut conn, &estate);
+
+        let user = crate::model::tests::create_test_user(&mut conn);
+
+        let ownership_1 = crate::model::tests::create_test_ownership(&mut conn, &plot_1, &user);
+        let ownership_2 = crate::model::tests::create_test_ownership(&mut conn, &plot_2, &user);
+
+        assert_eq!(
+            Ownership::get_ownership_for_user_and_plot(&mut conn, user.user_id, plot_1.plot_id)
+                .unwrap(),
+            ownership_1
+        );
+
+        assert_eq!(
+            Ownership::get_ownership_for_user_and_plot(&mut conn, user.user_id, plot_2.plot_id)
+                .unwrap(),
+            ownership_2
+        );
+
+        assert_eq!(
+            Ownership::get_ownership_for_user_and_plot(&mut conn, -1, -1).unwrap_err(),
+            NotFound
         );
     }
 
