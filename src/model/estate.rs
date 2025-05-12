@@ -1,7 +1,9 @@
-use diesel::{prelude::*, result::Error};
+use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::schema::estate;
+
+use super::Error;
 
 #[derive(
     Queryable, Selectable, Insertable, Debug, PartialEq, Eq, Clone, Serialize, Deserialize,
@@ -18,7 +20,7 @@ pub struct Estate {
 
 impl Estate {
     pub fn get_all_estates(conn: &mut PgConnection) -> Result<Vec<Estate>, Error> {
-        estate::table.load::<Estate>(conn)
+        estate::table.load::<Estate>(conn).map_err(Into::into)
     }
 
     pub fn create_estate(
@@ -36,6 +38,7 @@ impl Estate {
                 estate::landmark.eq(landmark),
             ))
             .get_result(conn)
+            .map_err(Into::into)
     }
 
     pub fn get_estate(conn: &mut PgConnection, estate_id: i32) -> Result<Estate, Error> {
@@ -43,6 +46,7 @@ impl Estate {
             .find(estate_id)
             .select(Estate::as_select())
             .first(conn)
+            .map_err(Into::into)
     }
 }
 

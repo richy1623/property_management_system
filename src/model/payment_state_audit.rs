@@ -1,7 +1,9 @@
-use diesel::{prelude::*, result::Error};
+use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{model::payment::PaymentState, schema::payment_state_audit};
+
+use super::Error;
 
 #[derive(
     Queryable, Selectable, Insertable, Debug, PartialEq, Eq, Clone, Serialize, Deserialize,
@@ -27,5 +29,6 @@ impl PaymentStateAudit {
             .filter(payment_state_audit::payment_id.eq(payment_id))
             .select(PaymentStateAudit::as_select())
             .get_results(conn)
+            .map_err(Into::into)
     }
 }

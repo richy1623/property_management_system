@@ -1,8 +1,10 @@
-use diesel::{insert_into, prelude::*, result::Error};
+use diesel::{insert_into, prelude::*};
 use diesel_derive_enum::DbEnum;
 use serde::{Deserialize, Serialize};
 
 use crate::schema::ownership;
+
+use super::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq, DbEnum, Serialize, Deserialize)]
 #[db_enum(
@@ -48,6 +50,7 @@ impl Ownership {
                 ownership::monthly_repayment_amount.eq(monthly_repayment_amount),
             ))
             .get_result(conn)
+            .map_err(Into::into)
     }
 
     pub fn get_ownership(conn: &mut PgConnection, ownership_id: i32) -> Result<Ownership, Error> {
@@ -55,6 +58,7 @@ impl Ownership {
             .find(ownership_id)
             .select(Ownership::as_select())
             .first(conn)
+            .map_err(Into::into)
     }
 
     pub fn get_ownership_for_user_and_plot(
@@ -67,6 +71,7 @@ impl Ownership {
             .filter(ownership::plot_id.eq(plot_id))
             .select(Ownership::as_select())
             .first(conn)
+            .map_err(Into::into)
     }
 
     pub fn get_all_ownerships_for_user_id(
@@ -77,6 +82,7 @@ impl Ownership {
             .filter(ownership::user_id.eq(user_id))
             .select(Ownership::as_select())
             .get_results(conn)
+            .map_err(Into::into)
     }
 }
 
@@ -155,7 +161,7 @@ mod tests {
 
         assert_eq!(
             Ownership::get_ownership_for_user_and_plot(&mut conn, -1, -1).unwrap_err(),
-            diesel::result::Error::NotFound
+            super::Error::DatabaseError(diesel::result::Error::NotFound)
         );
     }
 

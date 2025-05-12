@@ -1,8 +1,10 @@
-use diesel::{insert_into, prelude::*, result::Error};
+use diesel::{insert_into, prelude::*};
 use diesel_derive_enum::DbEnum;
 use serde::{Deserialize, Serialize};
 
 use crate::schema::payment::{self};
+
+use super::Error;
 
 static USER_SUBMITTED_PAYMENT_COMMENT: &str = "User submitted payment request";
 
@@ -58,6 +60,7 @@ impl Payment {
                 payment::proof_of_payment_path.eq(proof_of_payment_path),
             ))
             .get_result(conn)
+            .map_err(Into::into)
     }
 
     pub fn create_user_payment(
@@ -87,6 +90,7 @@ impl Payment {
             .find(payment_id)
             .select(Payment::as_select())
             .first(conn)
+            .map_err(Into::into)
     }
 
     pub fn get_all_payments_for_ownership_id(
@@ -97,6 +101,7 @@ impl Payment {
             .filter(payment::ownership_id.eq(ownership_id))
             .select(Payment::as_select())
             .get_results(conn)
+            .map_err(Into::into)
     }
 
     pub fn get_all_payments_in_state(
@@ -112,6 +117,7 @@ impl Payment {
             .offset(offset)
             .select(Payment::as_select())
             .get_results(conn)
+            .map_err(Into::into)
     }
 
     pub fn update_payment_state(
@@ -128,6 +134,7 @@ impl Payment {
                 payment::comment.eq(comment),
             ))
             .get_result(conn)
+            .map_err(Into::into)
     }
 }
 

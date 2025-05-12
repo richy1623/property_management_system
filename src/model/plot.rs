@@ -1,7 +1,9 @@
-use diesel::{prelude::*, result::Error};
+use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::schema::plot;
+
+use super::Error;
 
 #[derive(
     Queryable, Selectable, Insertable, Debug, PartialEq, Eq, Clone, Serialize, Deserialize,
@@ -35,6 +37,7 @@ impl Plot {
                 plot::width.eq(width),
             ))
             .get_result(conn)
+            .map_err(Into::into)
     }
 
     pub fn get_plot(conn: &mut PgConnection, plot_id: i32) -> Result<Plot, Error> {
@@ -42,6 +45,7 @@ impl Plot {
             .find(plot_id)
             .select(Plot::as_select())
             .first(conn)
+            .map_err(Into::into)
     }
 
     pub fn get_plot_with_plot_number_and_estate_id(
@@ -54,6 +58,7 @@ impl Plot {
             .filter(plot::estate_id.eq(estate_id))
             .select(Plot::as_select())
             .first(conn)
+            .map_err(Into::into)
     }
 }
 

@@ -1,8 +1,10 @@
-use diesel::{insert_into, prelude::*, result::Error};
+use diesel::{insert_into, prelude::*};
 use diesel_derive_enum::DbEnum;
 use serde::{Deserialize, Serialize};
 
 use crate::schema::user_permission;
+
+use super::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq, DbEnum, Serialize, Deserialize)]
 #[db_enum(
@@ -53,6 +55,7 @@ impl UserPermission {
                     .map(|user_permission| user_permission.permission)
                     .collect()
             })
+            .map_err(Into::into)
     }
 
     pub fn remove_all_user_permission(
@@ -62,6 +65,7 @@ impl UserPermission {
         diesel::delete(user_permission::table)
             .filter(user_permission::user_id.eq(user_id))
             .execute(conn)
+            .map_err(Into::into)
     }
 
     pub fn get_all_user_permissions(
@@ -72,6 +76,7 @@ impl UserPermission {
             .filter(user_permission::user_id.eq(user_id))
             .select(user_permission::permission)
             .get_results(conn)
+            .map_err(Into::into)
     }
 }
 
