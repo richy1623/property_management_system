@@ -1,0 +1,15 @@
+// TODO common date
+// syntax = "proto3";
+// package property_management_system.common;
+
+// // A message to represent a calendar date (no time component).
+// message Date {
+//     // Year of the date, e.g., 2025
+//     int32 year = 1;
+  
+//     // Month of the date, from 1 (January) to 12 (December)
+//     int32 month = 2;
+  
+//     // Day of the month, from 1 to 31 depending on the month and year
+//     int32 day = 3;
+// }

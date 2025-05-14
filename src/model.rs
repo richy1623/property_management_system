@@ -27,9 +27,9 @@ impl From<password_hash::Error> for Error {
     }
 }
 
-impl Error {
-    pub fn to_status(&self) -> Status {
-        match self {
+impl From<Error> for Status {
+    fn from(err: Error) -> Self {
+        match err {
             Error::DatabaseError(diesel_err) => match diesel_err {
                 diesel::result::Error::NotFound => {
                     Status::new(Code::NotFound, "Resource not found")
@@ -49,7 +49,7 @@ impl Error {
                 },
                 diesel::result::Error::BrokenTransactionManager => Status::new(
                     Code::Unavailable,
-                    "Broken Transaction Manager, likely dur to database connection issue",
+                    "Broken Transaction Manager, likely due to database connection issue",
                 ),
                 _ => Status::new(
                     Code::Internal,

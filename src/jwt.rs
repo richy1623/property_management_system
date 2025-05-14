@@ -21,7 +21,7 @@ static JWT_VALIDATION: Lazy<Validation> = Lazy::new(|| {
 /// authentication and authorization.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct Claims {
-    /// Subject of the token (usually a user ID).
+    /// Subject of the token (username).
     pub sub: String,
 
     /// Expiration time (as a UTC UNIX timestamp in seconds).
@@ -118,8 +118,11 @@ impl Jwt {
         }
     }
 
-    pub fn encode_jwt_token(&self, claims: Claims) -> Result<String, jsonwebtoken::errors::Error> {
-        jsonwebtoken::encode(&Header::default(), &claims, &self.encoding_key)
+    pub fn encode_jwt_token(&self, claims: Claims) -> String {
+        jsonwebtoken::encode(&Header::default(), &claims, &self.encoding_key).expect(&format!(
+            "Failed to create JWT token for claims {:?}",
+            claims
+        ))
     }
 
     pub fn decode_jwt_token(
@@ -140,9 +143,8 @@ mod tests {
     pub fn test_encode() {
         let jwt = Jwt::new("a-string-secret-at-least-256-bits-long");
 
-        let jwt_token = jwt
-            .encode_jwt_token(ClaimsBuilder::new("user_1").permission("test").build())
-            .unwrap();
+        let jwt_token =
+            jwt.encode_jwt_token(ClaimsBuilder::new("user_1").permission("test").build());
 
         let token_data = jwt.decode_jwt_token(&jwt_token).unwrap();
 

@@ -5,16 +5,20 @@ use diesel::{
 use diesel_migrations::MigrationHarness;
 use tonic::{Request, Response, Status};
 
-use crate::{MIGRATIONS, model::user::User};
+use crate::{
+    MIGRATIONS,
+    jwt::{ClaimsBuilder, Jwt},
+    model::user::User,
+};
 
 use super::user_management_proto::{
     UserCreationRequest, UserCreationResponse, UserLoginRequest, UserLoginResponse,
     user_management_server::UserManagement,
 };
 
-#[derive(Debug)]
 pub struct UserManagementService {
     database_connection_pool: Pool<ConnectionManager<PgConnection>>,
+    jwt: Jwt,
 }
 
 impl UserManagementService {
@@ -29,6 +33,7 @@ impl UserManagementService {
 
         UserManagementService {
             database_connection_pool: database_connection_pool,
+            jwt: Jwt::new("a-string-secret-at-least-256-bits-long"),
         }
     }
 }
@@ -46,7 +51,7 @@ impl UserManagement for UserManagementService {
         };
 
         let request = request.get_ref();
-        let user = match User::create_user(
+        let user = User::create_user(
             &mut conn,
             &request.user_name,
             &request.name,
@@ -54,10 +59,7 @@ impl UserManagement for UserManagementService {
             request.email_address.as_deref(),
             request.identification_number.as_deref(),
             &request.password,
-        ) {
-            Ok(user) => user,
-            Err(e) => return Err(e.to_status()),
-        };
+        )?;
 
         let reply = UserCreationResponse {
             message: format!("User '{}' created successfully!", user.user_name),
@@ -76,14 +78,14 @@ impl UserManagement for UserManagementService {
             Err(e) => return Err(Status::internal(e.to_string())),
         };
 
-        let request = request.get_ref();
+        let request: &UserLoginRequest = request.get_ref();
 
-        match User::validate_login(&mut conn, &request.user_name, &request.password) {
-            Ok(_) => Ok(Response::new(UserLoginResponse {
-                // TODO JWT
-                jwt_token: "token".to_string(),
-            })),
-            Err(e) => Err(e.to_status()),
-        }
+        let user = User::validate_login(&mut conn, &request.user_name, &request.password)?;
+
+        Ok(Response::new(UserLoginResponse {
+            jwt_token: self
+                .jwt
+                .encode_jwt_token(ClaimsBuilder::new(&user.user_name).build()),
+        }))
     }
 }

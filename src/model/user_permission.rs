@@ -11,8 +11,11 @@ use super::Error;
     existing_type_path = "crate::schema::sql_types::PermissionType",
     value_style = "SCREAMING_SNAKE_CASE"
 )]
+#[derive(strum::Display)]
+#[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 pub enum PermissionType {
     ViewPayments,
+    CreatePayments,
     EditPayments,
     ManageUsers,
     ViewReports,

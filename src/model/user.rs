@@ -64,17 +64,16 @@ impl User {
         conn: &mut PgConnection,
         user_name: &str,
         password: &str,
-    ) -> Result<(), Error> {
+    ) -> Result<User, Error> {
         let user: User = user::table
             .filter(user::user_name.eq(user_name))
             .select(User::as_select())
             .first(conn)?;
-        ARGON2
-            .verify_password(
-                password.as_bytes(),
-                &PasswordHash::new(&user.password_hash)?,
-            )
-            .map_err(Into::into)
+        ARGON2.verify_password(
+            password.as_bytes(),
+            &PasswordHash::new(&user.password_hash)?,
+        )?;
+        Ok(user)
     }
 
     fn hash_password(password: &str) -> Result<String, password_hash::Error> {
