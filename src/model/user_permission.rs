@@ -19,6 +19,8 @@ pub enum PermissionType {
     EditPayments,
     ManageUsers,
     ViewReports,
+    ViewEstates,
+    UpdateEstates,
 }
 
 #[derive(

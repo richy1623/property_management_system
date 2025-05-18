@@ -1,0 +1,25 @@
+syntax = "proto3";
+package property_management_system.estate_management;
+
+service EstateManagement {
+    rpc CreateEstate (EstateCreationRequest) returns (Estate);
+    rpc GetAllEstates (Empty) returns (EstateList);
+}
+
+message Empty {}
+
+message Estate {
+    string name = 1;
+    string location = 2;
+    string district = 3;
+    string landmark = 4;
+}
+
+message EstateCreationRequest {
+    Estate estate = 1;
+    string jwt_token = 2;
+}
+
+message EstateList {
+    repeated Estate estates = 1;
+}

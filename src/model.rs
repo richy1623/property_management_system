@@ -70,7 +70,7 @@ impl From<Error> for Status {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use chrono::NaiveDate;
     use diesel::PgConnection;
     use uuid::Uuid;
