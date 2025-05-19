@@ -96,3 +96,107 @@ impl PaymentManagement for PaymentManagementService {
         }))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        jwt::{ClaimsBuilder, Jwt},
+        service::payment_management::payment_management_proto::Date,
+    };
+    use rstest::rstest;
+
+    #[rstest]
+    #[tokio::test]
+    async fn test_create_payment_success() {
+        let pool = crate::tests::get_test_db_connection_pool(
+            "payment_management_service_test_create_payment_success",
+        );
+        let jwt = Jwt::new("a-string-secret-at-least-256-bits-long");
+        let service = PaymentManagementService {
+            database_connection_pool: pool.clone(),
+            jwt: jwt.clone(),
+        };
+
+        let mut conn = pool.get().unwrap();
+
+        let user = crate::model::tests::create_test_user(&mut conn);
+        let estate = crate::model::tests::create_test_estate(&mut conn);
+        let plot = &crate::model::tests::create_test_plot(&mut conn, &estate);
+        let ownership = crate::model::tests::create_test_ownership(&mut conn, &plot, &user);
+
+        let token = jwt.encode_jwt_token(
+            ClaimsBuilder::new(&user.user_name)
+                .permission(PermissionType::CreatePayments.to_string())
+                .build(),
+        );
+
+        let request = PaymentCreationRequest {
+            jwt_token: token,
+            username: user.user_name.clone(),
+            ownership_id: ownership.ownership_id,
+            date: Some(Date {
+                year: 2024,
+                month: 5,
+                day: 18,
+            }),
+            amount: 10000,
+            reference: "REF123".to_string(),
+            proof_of_payment_path: "/path/to/proof.pdf".to_string(),
+        };
+
+        let result = service.create_payment(Request::new(request)).await;
+
+        assert!(result.is_ok());
+        assert!(
+            result
+                .as_ref()
+                .unwrap()
+                .get_ref()
+                .message
+                .contains("Created payment")
+        );
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn test_create_payment_permission_denied() {
+        let pool = crate::tests::get_test_db_connection_pool(
+            "payment_management_service_test_create_payment_permission_denied",
+        );
+        let jwt = Jwt::new("a-string-secret-at-least-256-bits-long");
+        let service = PaymentManagementService {
+            database_connection_pool: pool.clone(),
+            jwt: jwt.clone(),
+        };
+
+        let mut conn = pool.get().unwrap();
+
+        let user = crate::model::tests::create_test_user(&mut conn);
+        let estate = crate::model::tests::create_test_estate(&mut conn);
+        let plot = &crate::model::tests::create_test_plot(&mut conn, &estate);
+        let ownership = crate::model::tests::create_test_ownership(&mut conn, &plot, &user);
+
+        // No permissions included in token
+        let token = jwt.encode_jwt_token(ClaimsBuilder::new("another_user").build());
+
+        let request = PaymentCreationRequest {
+            jwt_token: token,
+            username: user.user_name.clone(),
+            ownership_id: ownership.ownership_id,
+            date: Some(Date {
+                year: 2024,
+                month: 5,
+                day: 18,
+            }),
+            amount: 10000,
+            reference: "REF123".to_string(),
+            proof_of_payment_path: "/path/to/proof.pdf".to_string(),
+        };
+
+        let result = service.create_payment(Request::new(request)).await;
+
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code(), tonic::Code::PermissionDenied);
+    }
+}
