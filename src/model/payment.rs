@@ -254,7 +254,10 @@ mod tests {
             PaymentState::PendingApproval
         );
         assert_eq!(payment_state_audit.new_state, PaymentState::Rejected);
-        assert_eq!(payment_state_audit.change_timestamp, Utc::now());
+        assert_eq!(
+            payment_state_audit.change_timestamp.date_naive(),
+            Utc::now().date_naive()
+        );
         assert_eq!(payment_state_audit.comment, "new comment");
     }
 
