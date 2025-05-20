@@ -56,13 +56,9 @@ impl PaymentManagement for PaymentManagementService {
         let payment_creation_request = request.get_ref();
 
         // Validate perms
-        let jwt_token = match self
+        let jwt_token = self
             .jwt
-            .decode_jwt_token(&payment_creation_request.jwt_token)
-        {
-            Ok(token) => token,
-            Err(_) => return Err(Status::unauthenticated("Invalid JWT token")),
-        };
+            .decode_jwt_token(&payment_creation_request.jwt_token)?;
 
         if jwt_token.claims.sub != payment_creation_request.username
             && !jwt_token
@@ -70,6 +66,7 @@ impl PaymentManagement for PaymentManagementService {
                 .permissions
                 .contains(&PermissionType::CreatePayments.to_string())
         {
+            // TODO don't like this
             return Err(Status::permission_denied(
                 "Insufficient permissions to make payment",
             ));

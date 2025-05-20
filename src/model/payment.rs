@@ -254,7 +254,6 @@ mod tests {
             PaymentState::PendingApproval
         );
         assert_eq!(payment_state_audit.new_state, PaymentState::Rejected);
-        // TODO time zone issue
         assert_eq!(payment_state_audit.change_timestamp, Utc::now());
         assert_eq!(payment_state_audit.comment, "new comment");
     }

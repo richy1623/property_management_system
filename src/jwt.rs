@@ -4,6 +4,8 @@ use jsonwebtoken::{DecodingKey, EncodingKey, Header, TokenData, Validation};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
+use crate::model::Error;
+
 const DEFAULT_ISSUER: &str = "my-app";
 const DEFAULT_EXPIRY: Duration = Duration::from_secs(30 * 60); // 60 minutes
 
@@ -125,19 +127,19 @@ impl Jwt {
         ))
     }
 
-    pub fn decode_jwt_token(
-        &self,
-        token: &str,
-    ) -> Result<TokenData<Claims>, jsonwebtoken::errors::Error> {
+    pub fn decode_jwt_token(&self, token: &str) -> Result<TokenData<Claims>, Error> {
         jsonwebtoken::decode::<Claims>(&token, &self.decoding_key, &JWT_VALIDATION)
+            .map_err(Into::into)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::jwt::{ClaimsBuilder, DEFAULT_ISSUER};
-
     use super::Jwt;
+    use crate::{
+        jwt::{ClaimsBuilder, DEFAULT_ISSUER},
+        model::Error,
+    };
 
     #[test]
     pub fn test_encode() {
@@ -176,8 +178,18 @@ mod tests {
     pub fn test_expired_token() {
         let jwt = Jwt::new("a-string-secret-at-least-256-bits-long");
 
-        assert_eq!(jwt
-            .decode_jwt_token("eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyXzEiLCJleHAiOjAsImlhdCI6MCwiaXNzIjoibXktYXBwIiwicGVybWlzc2lvbnMiOlsidGVzdCJdfQ.0VA-tSe1cOS3rCdFZWXBgddCCtXjzXTwbTh49WFDE8g").unwrap_err().into_kind()
-            ,jsonwebtoken::errors::ErrorKind::ExpiredSignature);
+        let err = jwt
+        .decode_jwt_token("eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyXzEiLCJleHAiOjAsImlhdCI6MCwiaXNzIjoibXktYXBwIiwicGVybWlzc2lvbnMiOlsidGVzdCJdfQ.0VA-tSe1cOS3rCdFZWXBgddCCtXjzXTwbTh49WFDE8g")
+        .unwrap_err();
+
+        match err {
+            Error::AuthorizationError(jwt_err) => {
+                assert_eq!(
+                    jwt_err.kind(),
+                    &jsonwebtoken::errors::ErrorKind::ExpiredSignature
+                );
+            }
+            _ => panic!("Expected Jwt error"),
+        }
     }
 }

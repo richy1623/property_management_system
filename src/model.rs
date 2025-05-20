@@ -12,7 +12,7 @@ pub mod user_permission;
 pub enum Error {
     DatabaseError(diesel::result::Error),
     CryptographyError(password_hash::Error),
-    AuthorizationError, //TODO evaluate this later
+    AuthorizationError(jsonwebtoken::errors::Error),
 }
 
 impl From<diesel::result::Error> for Error {
@@ -24,6 +24,12 @@ impl From<diesel::result::Error> for Error {
 impl From<password_hash::Error> for Error {
     fn from(err: password_hash::Error) -> Self {
         Error::CryptographyError(err)
+    }
+}
+
+impl From<jsonwebtoken::errors::Error> for Error {
+    fn from(err: jsonwebtoken::errors::Error) -> Self {
+        Error::AuthorizationError(err)
     }
 }
 
@@ -62,8 +68,8 @@ impl From<Error> for Status {
                 }
                 _ => Status::new(Code::Internal, "Internal cryptographic error"),
             },
-            Error::AuthorizationError => {
-                Status::new(Code::PermissionDenied, "Resource authentication not met")
+            Error::AuthorizationError(jwt_error) => {
+                Status::new(Code::PermissionDenied, jwt_error.to_string())
             }
         }
     }

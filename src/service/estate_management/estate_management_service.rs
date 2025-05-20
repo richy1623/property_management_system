@@ -41,7 +41,6 @@ impl EstateManagement for EstateManagementService {
     ) -> Result<Response<Estate>, Status> {
         let mut conn = match self.database_connection_pool.clone().get() {
             Ok(conn) => conn,
-            // TODO don't like this
             Err(e) => return Err(Status::internal(e.to_string())),
         };
 
@@ -49,11 +48,7 @@ impl EstateManagement for EstateManagementService {
         let request_estate = request.estate.unwrap();
 
         // Validate JWT token
-        // TODO don't like this
-        let jwt_token = self
-            .jwt
-            .decode_jwt_token(&request.jwt_token)
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let jwt_token = self.jwt.decode_jwt_token(&request.jwt_token)?;
 
         // Check for required claim
         if !jwt_token
