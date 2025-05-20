@@ -64,12 +64,12 @@ impl From<Error> for Status {
             },
             Error::CryptographyError(crypto_err) => match crypto_err {
                 password_hash::Error::Password => {
-                    Status::new(Code::PermissionDenied, "Invalid password")
+                    Status::new(Code::Unauthenticated, "Invalid password")
                 }
                 _ => Status::new(Code::Internal, "Internal cryptographic error"),
             },
             Error::AuthorizationError(jwt_error) => {
-                Status::new(Code::PermissionDenied, jwt_error.to_string())
+                Status::new(Code::Unauthenticated, jwt_error.to_string())
             }
         }
     }
