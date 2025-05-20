@@ -64,7 +64,7 @@ diesel::table! {
         payment_id -> Int4,
         previous_state -> PaymentState,
         new_state -> PaymentState,
-        change_timestamp -> Timestamp,
+        change_timestamp -> Timestamptz,
         changed_by_user -> Int4,
         comment -> Text,
     }

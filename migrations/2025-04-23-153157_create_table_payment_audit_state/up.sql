@@ -5,7 +5,7 @@ CREATE TABLE
         payment_id INTEGER NOT NULL,
         previous_state payment_state NOT NULL,
         new_state payment_state NOT NULL,
-        change_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        change_timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
         changed_by_user INTEGER NOT NULL,
         comment TEXT NOT NULL,
         CONSTRAINT fk_payment FOREIGN KEY (payment_id) REFERENCES payment (payment_id),

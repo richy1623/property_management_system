@@ -140,7 +140,7 @@ impl Payment {
 
 #[cfg(test)]
 mod tests {
-    use chrono::{Local, NaiveDate};
+    use chrono::{NaiveDate, Utc};
     use diesel::{
         PgConnection,
         r2d2::{ConnectionManager, Pool},
@@ -254,10 +254,8 @@ mod tests {
             PaymentState::PendingApproval
         );
         assert_eq!(payment_state_audit.new_state, PaymentState::Rejected);
-        assert_eq!(
-            payment_state_audit.change_timestamp.date(),
-            Local::now().date_naive()
-        );
+        // TODO time zone issue
+        assert_eq!(payment_state_audit.change_timestamp, Utc::now());
         assert_eq!(payment_state_audit.comment, "new comment");
     }
 
