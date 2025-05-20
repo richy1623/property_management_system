@@ -66,7 +66,6 @@ impl PaymentManagement for PaymentManagementService {
                 .permissions
                 .contains(&PermissionType::CreatePayments.to_string())
         {
-            // TODO don't like this
             return Err(Status::permission_denied(
                 "Insufficient permissions to make payment",
             ));
