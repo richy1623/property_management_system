@@ -9,17 +9,23 @@ service EstateManagement {
 message Empty {}
 
 message Estate {
-    string name = 1;
-    string location = 2;
-    string district = 3;
-    string landmark = 4;
+    int32 estate_id = 1; 
+    string name = 2;
+    string location = 3;
+    string district = 4;
+    string landmark = 5;
 }
 
 message EstateCreationRequest {
-    Estate estate = 1;
-    string jwt_token = 2;
+    string jwt_token = 1;
+    string name = 2;
+    string location = 3;
+    string district = 4;
+    string landmark = 5;
 }
 
 message EstateList {
     repeated Estate estates = 1;
 }
+
+// message CreatePlots 

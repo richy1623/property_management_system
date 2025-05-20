@@ -45,7 +45,7 @@ impl EstateManagement for EstateManagementService {
         };
 
         let request = request.into_inner();
-        let request_estate = request.estate.unwrap();
+        // let request_estate = request.estate.unwrap();
 
         // Validate JWT token
         let jwt_token = self.jwt.decode_jwt_token(&request.jwt_token)?;
@@ -63,13 +63,14 @@ impl EstateManagement for EstateManagementService {
 
         let estate = EstateModel::create_estate(
             &mut conn,
-            &request_estate.name,
-            &request_estate.location,
-            &request_estate.district,
-            &request_estate.landmark,
+            &request.name,
+            &request.location,
+            &request.district,
+            &request.landmark,
         )?;
 
         let reply = super::estate_management_proto::Estate {
+            estate_id: estate.estate_id,
             name: estate.name.clone(),
             location: estate.location.clone(),
             district: estate.district.clone(),
@@ -93,6 +94,7 @@ impl EstateManagement for EstateManagementService {
         let estate_list = estates
             .iter()
             .map(|estate| super::estate_management_proto::Estate {
+                estate_id: estate.estate_id,
                 name: estate.name.clone(),
                 location: estate.location.clone(),
                 district: estate.district.clone(),
@@ -131,12 +133,10 @@ mod tests {
                     .permission(PermissionType::UpdateEstates.to_string())
                     .build(),
             ),
-            estate: Some(Estate {
-                name: "Test Estate".to_string(),
-                location: "Test Location".to_string(),
-                district: "Test District".to_string(),
-                landmark: "Test Landmark".to_string(),
-            }),
+            name: "Test Estate".to_string(),
+            location: "Test Location".to_string(),
+            district: "Test District".to_string(),
+            landmark: "Test Landmark".to_string(),
         };
 
         let response = service.create_estate(Request::new(request)).await;
@@ -174,12 +174,10 @@ mod tests {
 
         let request = EstateCreationRequest {
             jwt_token: token,
-            estate: Some(Estate {
-                name: "Test Estate".to_string(),
-                location: "Test Location".to_string(),
-                district: "Test District".to_string(),
-                landmark: "Test Landmark".to_string(),
-            }),
+            name: "Test Estate".to_string(),
+            location: "Test Location".to_string(),
+            district: "Test District".to_string(),
+            landmark: "Test Landmark".to_string(),
         };
 
         let result = service.create_estate(Request::new(request)).await;
