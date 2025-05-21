@@ -1,4 +1,4 @@
-tonic::include_proto!("property_management_system.estate_management");
+tonic::include_proto!("property_management_system.property_management");
 
 impl From<crate::model::estate::Estate> for Estate {
     fn from(estate: crate::model::estate::Estate) -> Self {

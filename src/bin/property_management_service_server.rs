@@ -1,9 +1,9 @@
 use std::env;
 
 use dotenvy::dotenv;
-use property_management_system::service::estate_management::{
-    estate_management_proto::estate_management_server::EstateManagementServer,
-    estate_management_service::EstateManagementService,
+use property_management_system::service::property_management::{
+    property_management_proto::property_management_server::PropertyManagementServer,
+    property_management_service::PropertyManagementService,
 };
 use tonic::transport::Server;
 
@@ -13,10 +13,10 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
 
     let addr = "[::1]:50053".parse()?;
-    let greeter = EstateManagementService::new(&database_url);
+    let greeter = PropertyManagementService::new(&database_url);
 
     Server::builder()
-        .add_service(EstateManagementServer::new(greeter))
+        .add_service(PropertyManagementServer::new(greeter))
         .serve(addr)
         .await?;
 

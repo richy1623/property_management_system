@@ -5,20 +5,20 @@ use diesel::{
 use diesel_migrations::MigrationHarness;
 use tonic::{Request, Response, Status};
 
-use super::estate_management_proto::{
+use super::property_management_proto::{
     Empty, Estate, EstateCreationRequest, EstateList, GetPlotsRequest, Plot, PlotCreationRequest,
-    PlotList, estate_management_server::EstateManagement,
+    PlotList, property_management_server::PropertyManagement,
 };
 use crate::model::plot::Plot as PlotModel;
 use crate::model::{estate::Estate as EstateModel, ownership::OwnershipState};
 use crate::{MIGRATIONS, jwt::Jwt, model::user_permission::PermissionType};
 
-pub struct EstateManagementService {
+pub struct PropertyManagementService {
     database_connection_pool: Pool<ConnectionManager<PgConnection>>,
     jwt: Jwt,
 }
 
-impl EstateManagementService {
+impl PropertyManagementService {
     pub fn new(database_connection_url: &str) -> Self {
         let database_connection_pool = crate::get_connection_pool(database_connection_url);
         database_connection_pool
@@ -28,7 +28,7 @@ impl EstateManagementService {
             .run_pending_migrations(MIGRATIONS)
             .expect("Failed running migrations");
 
-        EstateManagementService {
+        PropertyManagementService {
             database_connection_pool: database_connection_pool,
             jwt: Jwt::new("a-string-secret-at-least-256-bits-long"),
         }
@@ -36,7 +36,7 @@ impl EstateManagementService {
 }
 
 #[tonic::async_trait]
-impl EstateManagement for EstateManagementService {
+impl PropertyManagement for PropertyManagementService {
     async fn create_estate(
         &self,
         request: Request<EstateCreationRequest>,
@@ -71,7 +71,7 @@ impl EstateManagement for EstateManagementService {
             &request.landmark,
         )?;
 
-        let reply = super::estate_management_proto::Estate {
+        let reply = super::property_management_proto::Estate {
             estate_id: estate.estate_id,
             name: estate.name.clone(),
             location: estate.location.clone(),
@@ -95,7 +95,7 @@ impl EstateManagement for EstateManagementService {
 
         let estate_list = estates
             .iter()
-            .map(|estate| super::estate_management_proto::Estate {
+            .map(|estate| super::property_management_proto::Estate {
                 estate_id: estate.estate_id,
                 name: estate.name.clone(),
                 location: estate.location.clone(),
@@ -203,7 +203,7 @@ mod tests {
         let mut conn = pool.clone().get().unwrap();
         let jwt = Jwt::new("a-string-secret-at-least-256-bits-long");
 
-        let service = EstateManagementService {
+        let service = PropertyManagementService {
             database_connection_pool: pool.clone(),
             jwt,
         };
@@ -245,7 +245,7 @@ mod tests {
         );
         let jwt = Jwt::new("a-string-secret-at-least-256-bits-long");
 
-        let service = EstateManagementService {
+        let service = PropertyManagementService {
             database_connection_pool: pool,
             jwt,
         };
@@ -276,7 +276,7 @@ mod tests {
         let mut conn = pool.clone().get().unwrap();
         let jwt = Jwt::new("a-string-secret-at-least-256-bits-long");
 
-        let service = EstateManagementService {
+        let service = PropertyManagementService {
             database_connection_pool: pool,
             jwt,
         };
@@ -299,7 +299,7 @@ mod tests {
         let mut conn = pool.clone().get().unwrap();
         let jwt = Jwt::new("a-string-secret-at-least-256-bits-long");
 
-        let service = EstateManagementService {
+        let service = PropertyManagementService {
             database_connection_pool: pool.clone(),
             jwt,
         };
@@ -345,7 +345,7 @@ mod tests {
         let mut conn = pool.clone().get().unwrap();
         let jwt = Jwt::new("a-string-secret-at-least-256-bits-long");
 
-        let service = EstateManagementService {
+        let service = PropertyManagementService {
             database_connection_pool: pool.clone(),
             jwt,
         };
@@ -377,7 +377,7 @@ mod tests {
         let mut conn = pool.clone().get().unwrap();
         let jwt = Jwt::new("a-string-secret-at-least-256-bits-long");
 
-        let service = EstateManagementService {
+        let service = PropertyManagementService {
             database_connection_pool: pool.clone(),
             jwt,
         };
@@ -422,7 +422,7 @@ mod tests {
         let mut conn = pool.clone().get().unwrap();
         let jwt = Jwt::new("a-string-secret-at-least-256-bits-long");
 
-        let service = EstateManagementService {
+        let service = PropertyManagementService {
             database_connection_pool: pool.clone(),
             jwt,
         };
