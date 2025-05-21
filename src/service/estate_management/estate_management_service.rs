@@ -6,9 +6,11 @@ use diesel_migrations::MigrationHarness;
 use tonic::{Request, Response, Status};
 
 use super::estate_management_proto::{
-    Empty, Estate, EstateCreationRequest, EstateList, estate_management_server::EstateManagement,
+    Empty, Estate, EstateCreationRequest, EstateList, GetPlotsRequest, Plot, PlotCreationRequest,
+    PlotList, estate_management_server::EstateManagement,
 };
-use crate::model::estate::Estate as EstateModel;
+use crate::model::plot::Plot as PlotModel;
+use crate::model::{estate::Estate as EstateModel, ownership::OwnershipState};
 use crate::{MIGRATIONS, jwt::Jwt, model::user_permission::PermissionType};
 
 pub struct EstateManagementService {
@@ -104,6 +106,86 @@ impl EstateManagement for EstateManagementService {
 
         Ok(Response::new(EstateList {
             estates: estate_list,
+        }))
+    }
+
+    async fn create_plot(
+        &self,
+        request: Request<PlotCreationRequest>,
+    ) -> Result<Response<Plot>, Status> {
+        let mut conn = self
+            .database_connection_pool
+            .clone()
+            .get()
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let req = request.into_inner();
+
+        // Validate JWT
+        let jwt_token = self.jwt.decode_jwt_token(&req.jwt_token)?;
+        if !jwt_token
+            .claims
+            .permissions
+            .contains(&PermissionType::UpdateEstates.to_string())
+        {
+            return Err(Status::permission_denied(
+                "Insufficient permissions to create plot",
+            ));
+        }
+
+        let plot = PlotModel::create_plot(
+            &mut conn,
+            req.estate_id,
+            &req.plot_number,
+            &req.phase,
+            req.length,
+            req.width,
+        )?;
+
+        Ok(Response::new((&plot).into()))
+    }
+
+    async fn get_plots(
+        &self,
+        request: Request<GetPlotsRequest>,
+    ) -> Result<Response<PlotList>, Status> {
+        let mut conn = self
+            .database_connection_pool
+            .clone()
+            .get()
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let get_plots_request = request.into_inner();
+
+        // Validate JWT
+        let jwt_token = self.jwt.decode_jwt_token(&get_plots_request.jwt_token)?;
+        if jwt_token.claims.permissions.is_empty() {
+            return Err(Status::permission_denied("Invalid permissions"));
+        }
+
+        let allowed_ownership_states: Vec<OwnershipState> = get_plots_request
+            .allowed_ownership_states
+            .iter()
+            .map(|state| {
+                (*state).try_into().map_err(|_e| {
+                    Status::invalid_argument(format!(
+                        "Invalid allowed_ownership_states: {:?}",
+                        &get_plots_request.allowed_ownership_states
+                    ))
+                })
+            })
+            .collect::<Result<_, _>>()?;
+
+        let plots: Vec<PlotModel> = PlotModel::get_plots_filtered(
+            &mut conn,
+            get_plots_request.plot_number.as_deref(),
+            get_plots_request.estate_id,
+            get_plots_request.phase.as_deref(),
+            allowed_ownership_states,
+        )?;
+
+        Ok(Response::new(PlotList {
+            plots: plots.iter().map(|plot| plot.into()).collect(),
         }))
     }
 }
@@ -207,5 +289,164 @@ mod tests {
         let result = service.get_all_estates(request).await.unwrap();
 
         assert_eq!(result.get_ref().estates, vec![estate_1, estate_2]);
+    }
+
+    #[tokio::test]
+    async fn test_create_plot_success() {
+        let pool = crate::tests::get_test_db_connection_pool(
+            "estate_management_service_test_create_plot_success",
+        );
+        let mut conn = pool.clone().get().unwrap();
+        let jwt = Jwt::new("a-string-secret-at-least-256-bits-long");
+
+        let service = EstateManagementService {
+            database_connection_pool: pool.clone(),
+            jwt,
+        };
+
+        let estate = crate::model::tests::create_test_estate(&mut conn);
+
+        let request = PlotCreationRequest {
+            jwt_token: service.jwt.encode_jwt_token(
+                ClaimsBuilder::new("user")
+                    .permission(PermissionType::UpdateEstates.to_string())
+                    .build(),
+            ),
+            estate_id: estate.estate_id,
+            plot_number: "P-100".to_string(),
+            phase: "Phase A".to_string(),
+            length: 20,
+            width: 30,
+        };
+
+        let plot = service
+            .create_plot(Request::new(request))
+            .await
+            .unwrap()
+            .into_inner();
+        assert_eq!(plot.plot_number, "P-100");
+        assert_eq!(plot.phase, "Phase A");
+        assert_eq!(plot.length, 20);
+        assert_eq!(plot.width, 30);
+
+        let plots: Vec<Plot> = PlotModel::get_plots_filtered(&mut conn, None, None, None, vec![])
+            .unwrap()
+            .iter()
+            .map(|p| p.into())
+            .collect();
+        assert_eq!(plots, vec![plot]);
+    }
+
+    #[tokio::test]
+    async fn test_create_plot_permission_denied() {
+        let pool = crate::tests::get_test_db_connection_pool(
+            "estate_management_service_test_create_plot_permission_denied",
+        );
+        let mut conn = pool.clone().get().unwrap();
+        let jwt = Jwt::new("a-string-secret-at-least-256-bits-long");
+
+        let service = EstateManagementService {
+            database_connection_pool: pool.clone(),
+            jwt,
+        };
+
+        let estate = crate::model::tests::create_test_estate(&mut conn);
+
+        let request = PlotCreationRequest {
+            jwt_token: service
+                .jwt
+                .encode_jwt_token(ClaimsBuilder::new("user").build()),
+            estate_id: estate.estate_id,
+            plot_number: "P-100".to_string(),
+            phase: "Phase A".to_string(),
+            length: 20,
+            width: 30,
+        };
+
+        let result = service.create_plot(Request::new(request)).await;
+
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code(), tonic::Code::PermissionDenied);
+    }
+
+    #[tokio::test]
+    async fn test_get_plots_filtered() {
+        let pool = crate::tests::get_test_db_connection_pool(
+            "estate_management_service_test_get_plots_filtered",
+        );
+        let mut conn = pool.clone().get().unwrap();
+        let jwt = Jwt::new("a-string-secret-at-least-256-bits-long");
+
+        let service = EstateManagementService {
+            database_connection_pool: pool.clone(),
+            jwt,
+        };
+
+        let estate = crate::model::tests::create_test_estate(&mut conn);
+
+        let plot_1 =
+            (&PlotModel::create_plot(&mut conn, estate.estate_id, "PN-1", "Phase X", 20, 30)
+                .unwrap())
+                .into();
+        let plot_2 =
+            (&PlotModel::create_plot(&mut conn, estate.estate_id, "PN-2", "Phase X", 25, 35)
+                .unwrap())
+                .into();
+
+        let request = GetPlotsRequest {
+            jwt_token: service.jwt.encode_jwt_token(
+                ClaimsBuilder::new("user")
+                    .permission(PermissionType::UpdateEstates.to_string())
+                    .build(),
+            ),
+            plot_number: None,
+            estate_id: None,
+            phase: Some("Phase X".to_string()),
+            allowed_ownership_states: vec![],
+        };
+
+        let plot_list = service
+            .get_plots(Request::new(request))
+            .await
+            .unwrap()
+            .into_inner();
+
+        assert_eq!(plot_list.plots, vec![plot_1, plot_2]);
+    }
+
+    #[tokio::test]
+    async fn test_get_plots_filtered_permission_denied() {
+        let pool = crate::tests::get_test_db_connection_pool(
+            "estate_management_service_test_get_plots_filtered_permission_denied",
+        );
+        let mut conn = pool.clone().get().unwrap();
+        let jwt = Jwt::new("a-string-secret-at-least-256-bits-long");
+
+        let service = EstateManagementService {
+            database_connection_pool: pool.clone(),
+            jwt,
+        };
+
+        let estate = crate::model::tests::create_test_estate(&mut conn);
+
+        let _plot_1 =
+            PlotModel::create_plot(&mut conn, estate.estate_id, "PN-1", "Phase X", 20, 30).unwrap();
+        let _plot_2 =
+            PlotModel::create_plot(&mut conn, estate.estate_id, "PN-2", "Phase X", 25, 35).unwrap();
+
+        let request = GetPlotsRequest {
+            jwt_token: service
+                .jwt
+                .encode_jwt_token(ClaimsBuilder::new("user").build()),
+            plot_number: None,
+            estate_id: None,
+            phase: Some("Phase X".to_string()),
+            allowed_ownership_states: vec![],
+        };
+
+        let result = service.get_plots(Request::new(request)).await;
+
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code(), tonic::Code::PermissionDenied);
     }
 }

@@ -11,3 +11,16 @@ impl From<crate::model::estate::Estate> for Estate {
         }
     }
 }
+
+impl From<&crate::model::plot::Plot> for Plot {
+    fn from(plot: &crate::model::plot::Plot) -> Self {
+        Plot {
+            plot_id: plot.plot_id,
+            estate_id: plot.estate_id,
+            plot_number: plot.plot_number.clone(),
+            phase: plot.phase.clone(),
+            length: plot.length,
+            width: plot.width,
+        }
+    }
+}
