@@ -385,13 +385,15 @@ mod tests {
         let estate = crate::model::tests::create_test_estate(&mut conn);
 
         let plot_1 =
-            (&PlotModel::create_plot(&mut conn, estate.estate_id, "PN-1", "Phase X", 20, 30)
-                .unwrap())
-                .into();
+            PlotModel::create_plot(&mut conn, estate.estate_id, "PN-1", "Phase X", 20, 30).unwrap();
         let plot_2 =
-            (&PlotModel::create_plot(&mut conn, estate.estate_id, "PN-2", "Phase X", 25, 35)
-                .unwrap())
-                .into();
+            PlotModel::create_plot(&mut conn, estate.estate_id, "PN-2", "Phase X", 25, 35).unwrap();
+        let _plot_3 =
+            PlotModel::create_plot(&mut conn, estate.estate_id, "PN-3", "Phase X", 25, 35).unwrap();
+
+        let user = crate::model::tests::create_test_user(&mut conn);
+        crate::model::tests::create_test_ownership(&mut conn, &plot_1, &user);
+        crate::model::tests::create_test_ownership(&mut conn, &plot_2, &user);
 
         let request = GetPlotsRequest {
             jwt_token: service.jwt.encode_jwt_token(
@@ -402,7 +404,7 @@ mod tests {
             plot_number: None,
             estate_id: None,
             phase: Some("Phase X".to_string()),
-            allowed_ownership_states: vec![],
+            allowed_ownership_states: vec![0],
         };
 
         let plot_list = service
@@ -411,7 +413,10 @@ mod tests {
             .unwrap()
             .into_inner();
 
-        assert_eq!(plot_list.plots, vec![plot_1, plot_2]);
+        assert_eq!(
+            plot_list.plots,
+            vec![Into::<Plot>::into(&plot_1), Into::<Plot>::into(&plot_2)]
+        );
     }
 
     #[tokio::test]
