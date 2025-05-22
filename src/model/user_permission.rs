@@ -15,12 +15,14 @@ use super::Error;
 #[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 pub enum PermissionType {
     ViewPayments,
-    CreatePayments,
-    EditPayments,
-    ManageUsers,
+    ModifyPayments,
+    ViewUsers,
+    ModifyUsers,
+    ViewProperties,
+    ModifyProperties,
+    ViewOwnerships,
+    ModifyOwnerships,
     ViewReports,
-    ViewEstates,
-    UpdateEstates,
 }
 
 #[derive(
@@ -111,24 +113,24 @@ mod tests {
         let user_permission = UserPermission::set_user_permission(
             &mut conn,
             user.user_id,
-            vec![PermissionType::ViewPayments, PermissionType::EditPayments],
+            vec![PermissionType::ViewPayments, PermissionType::ModifyPayments],
         )
         .unwrap();
 
         assert_eq!(
             user_permission,
-            vec![PermissionType::ViewPayments, PermissionType::EditPayments]
+            vec![PermissionType::ViewPayments, PermissionType::ModifyPayments]
         );
 
         let user_permission = UserPermission::set_user_permission(
             &mut conn,
             user.user_id,
-            vec![PermissionType::ViewPayments, PermissionType::ManageUsers],
+            vec![PermissionType::ViewPayments, PermissionType::ModifyUsers],
         )
         .unwrap();
         assert_eq!(
             user_permission,
-            vec![PermissionType::ViewPayments, PermissionType::ManageUsers]
+            vec![PermissionType::ViewPayments, PermissionType::ModifyUsers]
         );
     }
 

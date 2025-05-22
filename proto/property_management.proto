@@ -7,6 +7,8 @@ service PropertyManagement {
 
     rpc CreatePlot (PlotCreationRequest) returns (Plot);
     rpc GetPlots (GetPlotsRequest) returns (PlotList);
+
+    rpc CreateOwnership (OwnershipCreationRequest) returns (Ownership);
 }
 
 message Empty {}
@@ -67,4 +69,23 @@ enum OwnershipState {
 
 message PlotList {
     repeated Plot plots = 1;
+}
+
+message OwnershipCreationRequest {
+    string jwt_token = 1;
+    int32 user_id = 2;
+    int32 plot_id = 3;
+    OwnershipState state = 4;
+    int32 total_sale_value = 5;
+    int32 monthly_repayment_amount = 6;
+}
+
+message Ownership {
+    int32 ownership_id = 1;
+    int32 user_id = 2;
+    string user_name = 3;
+    int32 plot_id = 4;
+    OwnershipState state = 5;
+    int32 total_sale_value = 6;
+    int32 monthly_repayment_amount = 7;
 }

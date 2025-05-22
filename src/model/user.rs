@@ -98,6 +98,42 @@ impl User {
             .first(conn)
             .map_err(Into::into)
     }
+
+    pub fn get_filtered_users(
+        conn: &mut PgConnection,
+        username: Option<&str>,
+        name_regex: Option<&str>,
+        cellphone_number: Option<&str>,
+        email_address: Option<&str>,
+        identification_number: Option<&str>,
+    ) -> Result<Vec<User>, Error> {
+        let mut query = user::table.into_boxed();
+
+        if let Some(username) = username {
+            query = query.filter(user::user_name.eq(username));
+        }
+
+        if let Some(number) = cellphone_number {
+            query = query.filter(user::cellphone_number.eq(number));
+        }
+
+        if let Some(email) = email_address {
+            query = query.filter(user::email_address.eq(email));
+        }
+
+        if let Some(id) = identification_number {
+            query = query.filter(user::identification_number.eq(id));
+        }
+
+        if let Some(regex) = name_regex {
+            query = query.filter(user::name.ilike(format!("%{}%", regex)));
+        }
+
+        query
+            .select(User::as_select())
+            .get_results(conn)
+            .map_err(|e| e.into())
+    }
 }
 
 #[cfg(test)]
@@ -193,5 +229,86 @@ mod tests {
         );
 
         assert!(User::validate_login(&mut conn, "no_such_user", "password").is_err());
+    }
+
+    #[rstest]
+    pub fn test_get_filtered_users(pool: &Pool<ConnectionManager<PgConnection>>) {
+        let mut conn = pool.clone().get().unwrap();
+
+        // Seed users
+        let user1 = User::create_user(
+            &mut conn,
+            "alice123",
+            "Alice DxD",
+            Some("123456789"),
+            Some("alice@example.com"),
+            Some("ID001"),
+            "password",
+        )
+        .unwrap();
+
+        let user2 = User::create_user(
+            &mut conn,
+            "bob456",
+            "Bob DxD",
+            Some("987654321"),
+            Some("bob@example.com"),
+            Some("ID002"),
+            "password",
+        )
+        .unwrap();
+
+        let user3 = User::create_user(
+            &mut conn,
+            "carol789",
+            "Carol ZxZ",
+            Some("123123123"),
+            Some("carol@example.com"),
+            Some("ID003"),
+            "password",
+        )
+        .unwrap();
+
+        // --- Filter by username ---
+        let result =
+            User::get_filtered_users(&mut conn, Some("alice123"), None, None, None, None).unwrap();
+        assert_eq!(result, vec![user1.clone()]);
+
+        // --- Filter by name regex ---
+        let result =
+            User::get_filtered_users(&mut conn, None, Some("Ali"), None, None, None).unwrap();
+        assert_eq!(result, vec![user1.clone()]);
+
+        // --- Filter by name regex 2---
+        let result =
+            User::get_filtered_users(&mut conn, None, Some("DxD"), None, None, None).unwrap();
+        assert_eq!(result, vec![user1.clone(), user2.clone()]);
+
+        // --- Filter by name regex 3---
+        let result =
+            User::get_filtered_users(&mut conn, None, Some("x"), None, None, None).unwrap();
+        assert_eq!(result, vec![user1.clone(), user2.clone(), user3.clone()]);
+
+        // --- Filter by cellphone number ---
+        let result =
+            User::get_filtered_users(&mut conn, None, None, Some("987654321"), None, None).unwrap();
+        assert_eq!(result, vec![user2.clone()]);
+
+        // --- Filter by email address ---
+        let result =
+            User::get_filtered_users(&mut conn, None, None, None, Some("carol@example.com"), None)
+                .unwrap();
+        assert_eq!(result, vec![user3.clone()]);
+
+        // --- Filter by identification number ---
+        let result =
+            User::get_filtered_users(&mut conn, None, None, None, None, Some("ID002")).unwrap();
+        assert_eq!(result, vec![user2.clone()]);
+
+        // --- Multiple filters ---
+        let result =
+            User::get_filtered_users(&mut conn, None, Some("Bob"), Some("987654321"), None, None)
+                .unwrap();
+        assert_eq!(result, vec![user2.clone()]);
     }
 }

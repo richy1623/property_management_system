@@ -5,15 +5,15 @@ use diesel::{
 use diesel_migrations::MigrationHarness;
 use tonic::{Request, Response, Status};
 
+use crate::model::{user::User as UserModel, user_permission::PermissionType};
 use crate::{
     MIGRATIONS,
     jwt::{ClaimsBuilder, Jwt},
-    model::user::User,
 };
 
 use super::user_management_proto::{
-    UserCreationRequest, UserCreationResponse, UserLoginRequest, UserLoginResponse,
-    user_management_server::UserManagement,
+    ListUsersRequest, ListUsersResponse, User, UserCreationRequest, UserLoginRequest,
+    UserLoginResponse, user_management_server::UserManagement,
 };
 
 pub struct UserManagementService {
@@ -43,7 +43,7 @@ impl UserManagement for UserManagementService {
     async fn create_user(
         &self,
         request: Request<UserCreationRequest>,
-    ) -> Result<Response<UserCreationResponse>, Status> {
+    ) -> Result<Response<User>, Status> {
         println!("{:?}", request);
         let mut conn = match self.database_connection_pool.clone().get() {
             Ok(conn) => conn,
@@ -51,7 +51,7 @@ impl UserManagement for UserManagementService {
         };
 
         let request = request.get_ref();
-        let user = User::create_user(
+        let user = UserModel::create_user(
             &mut conn,
             &request.user_name,
             &request.name,
@@ -61,11 +61,7 @@ impl UserManagement for UserManagementService {
             &request.password,
         )?;
 
-        let reply = UserCreationResponse {
-            message: format!("User '{}' created successfully!", user.user_name),
-        };
-
-        Ok(Response::new(reply))
+        Ok(Response::new((&user).into()))
     }
 
     async fn login_user(
@@ -80,20 +76,60 @@ impl UserManagement for UserManagementService {
 
         let request: &UserLoginRequest = request.get_ref();
 
-        let user = User::validate_login(&mut conn, &request.user_name, &request.password)?;
+        let user = UserModel::validate_login(&mut conn, &request.user_name, &request.password)?;
 
         Ok(Response::new(UserLoginResponse {
-            jwt_token: self
+            jwt_token: __self
                 .jwt
                 .encode_jwt_token(ClaimsBuilder::new(&user.user_name).build()),
+            user_id: user.user_id,
         }))
+    }
+
+    async fn list_users(
+        &self,
+        request: tonic::Request<ListUsersRequest>,
+    ) -> Result<tonic::Response<ListUsersResponse>, tonic::Status> {
+        let mut conn = self
+            .database_connection_pool
+            .clone()
+            .get()
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let request = request.into_inner();
+
+        // Validate JWT
+        let jwt_token = self.jwt.decode_jwt_token(&request.jwt_token)?;
+        if !jwt_token
+            .claims
+            .permissions
+            .contains(&PermissionType::ViewUsers.to_string())
+        {
+            return Err(Status::permission_denied(
+                "Insufficient permissions to list users",
+            ));
+        }
+
+        // Fetch filtered users
+        let users = UserModel::get_filtered_users(
+            &mut conn,
+            request.username.as_deref(),
+            request.name_regex.as_deref(),
+            request.cellphone_number.as_deref(),
+            request.email_address.as_deref(),
+            request.identification_number.as_deref(),
+        )?;
+
+        let proto_users = users.into_iter().map(|user| (&user).into()).collect();
+
+        Ok(Response::new(ListUsersResponse { users: proto_users }))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{jwt::Jwt, model::user::User};
+    use crate::{jwt::Jwt, model::user_permission::PermissionType};
     use rstest::rstest;
     use tonic::Request;
 
@@ -103,6 +139,8 @@ mod tests {
         let pool = crate::tests::get_test_db_connection_pool(
             "user_management_service_test_create_user_success",
         );
+
+        let mut conn = pool.get().unwrap();
         let service = UserManagementService {
             database_connection_pool: pool.clone(),
             jwt: Jwt::new("a-string-secret-at-least-256-bits-long"),
@@ -117,11 +155,16 @@ mod tests {
             password: "password".to_string(),
         };
 
-        let response = service.create_user(Request::new(request)).await;
-        assert!(response.is_ok());
+        let response: User = service
+            .create_user(Request::new(request.clone()))
+            .await
+            .unwrap()
+            .into_inner();
 
-        let msg = response.unwrap().into_inner().message;
-        assert!(msg.contains("alice"));
+        let user_inserted: User =
+            (&UserModel::get_user_by_user_name(&mut conn, &request.user_name).unwrap()).into();
+
+        assert_eq!(user_inserted, response);
     }
 
     #[rstest]
@@ -133,7 +176,7 @@ mod tests {
         let mut conn = pool.get().unwrap();
 
         // Create user directly in DB to login later
-        let user = User::create_user(
+        let user = UserModel::create_user(
             &mut conn,
             "bob",
             "Bob Marley",
@@ -169,7 +212,7 @@ mod tests {
         );
         let mut conn = pool.get().unwrap();
 
-        let user = User::create_user(
+        let user = UserModel::create_user(
             &mut conn,
             "charlie",
             "Charlie Brown",
@@ -193,5 +236,91 @@ mod tests {
         let result = service.login_user(Request::new(request)).await;
         assert!(result.is_err());
         assert_eq!(result.unwrap_err().code(), tonic::Code::Unauthenticated);
+    }
+
+    #[tokio::test]
+    async fn test_list_users_with_permission() {
+        let pool = crate::tests::get_test_db_connection_pool(
+            "user_management_service_test_list_users_with_permission",
+        );
+        let mut conn = pool.get().unwrap();
+
+        let service = UserManagementService {
+            database_connection_pool: pool.clone(),
+            jwt: Jwt::new("a-string-secret-at-least-256-bits-long"),
+        };
+
+        // Setup test users
+        let user_1: User = (&UserModel::create_user(
+            &mut conn,
+            "alpha",
+            "Alice Eve",
+            Some("1234"),
+            Some("alice@mail.com"),
+            Some("ID123"),
+            "password",
+        )
+        .unwrap())
+            .into();
+        let user_2: User = (&UserModel::create_user(
+            &mut conn,
+            "beta",
+            "Bob Eve",
+            Some("5678"),
+            Some("bob@mail.com"),
+            Some("ID456"),
+            "password",
+        )
+        .unwrap())
+            .into();
+
+        let request = ListUsersRequest {
+            jwt_token: service.jwt.encode_jwt_token(
+                ClaimsBuilder::new("user")
+                    .permission(PermissionType::ViewUsers.to_string())
+                    .build(),
+            ),
+            username: None,
+            name_regex: Some("Eve".to_string()),
+            cellphone_number: None,
+            email_address: None,
+            identification_number: None,
+        };
+
+        let response = service
+            .list_users(Request::new(request))
+            .await
+            .unwrap()
+            .into_inner();
+
+        assert_eq!(response.users, vec![user_1, user_2]);
+    }
+    #[tokio::test]
+    async fn test_list_users_without_permission() {
+        let pool = crate::tests::get_test_db_connection_pool(
+            "user_management_service_test_list_users_without_permission",
+        );
+
+        let service = UserManagementService {
+            database_connection_pool: pool.clone(),
+            jwt: Jwt::new("a-string-secret-at-least-256-bits-long"),
+        };
+
+        // Request with username filter
+        let request = ListUsersRequest {
+            jwt_token: service
+                .jwt
+                .encode_jwt_token(ClaimsBuilder::new("user").build()),
+            username: None,
+            name_regex: None,
+            cellphone_number: None,
+            email_address: None,
+            identification_number: None,
+        };
+
+        let response = service.list_users(Request::new(request)).await;
+
+        assert!(response.is_err());
+        assert_eq!(response.unwrap_err().code(), tonic::Code::PermissionDenied);
     }
 }

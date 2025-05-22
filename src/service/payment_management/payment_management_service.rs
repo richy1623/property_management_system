@@ -64,7 +64,7 @@ impl PaymentManagement for PaymentManagementService {
             && !jwt_token
                 .claims
                 .permissions
-                .contains(&PermissionType::CreatePayments.to_string())
+                .contains(&PermissionType::ModifyPayments.to_string())
         {
             return Err(Status::permission_denied(
                 "Insufficient permissions to make payment",
@@ -123,7 +123,7 @@ mod tests {
 
         let token = jwt.encode_jwt_token(
             ClaimsBuilder::new(&user.user_name)
-                .permission(PermissionType::CreatePayments.to_string())
+                .permission(PermissionType::ModifyPayments.to_string())
                 .build(),
         );
 

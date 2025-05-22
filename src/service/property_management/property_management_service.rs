@@ -6,10 +6,13 @@ use diesel_migrations::MigrationHarness;
 use tonic::{Request, Response, Status};
 
 use super::property_management_proto::{
-    Empty, Estate, EstateCreationRequest, EstateList, GetPlotsRequest, Plot, PlotCreationRequest,
-    PlotList, property_management_server::PropertyManagement,
+    Empty, Estate, EstateCreationRequest, EstateList, GetPlotsRequest, Ownership,
+    OwnershipCreationRequest, Plot, PlotCreationRequest, PlotList,
+    property_management_server::PropertyManagement,
 };
+use crate::model::ownership::Ownership as OwnershipModel;
 use crate::model::plot::Plot as PlotModel;
+use crate::model::user::User as UserModel;
 use crate::model::{estate::Estate as EstateModel, ownership::OwnershipState};
 use crate::{MIGRATIONS, jwt::Jwt, model::user_permission::PermissionType};
 
@@ -56,7 +59,7 @@ impl PropertyManagement for PropertyManagementService {
         if !jwt_token
             .claims
             .permissions
-            .contains(&PermissionType::UpdateEstates.to_string())
+            .contains(&PermissionType::ModifyProperties.to_string())
         {
             return Err(Status::permission_denied(
                 "Insufficient permissions to create estate",
@@ -126,7 +129,7 @@ impl PropertyManagement for PropertyManagementService {
         if !jwt_token
             .claims
             .permissions
-            .contains(&PermissionType::UpdateEstates.to_string())
+            .contains(&PermissionType::ModifyProperties.to_string())
         {
             return Err(Status::permission_denied(
                 "Insufficient permissions to create plot",
@@ -158,10 +161,7 @@ impl PropertyManagement for PropertyManagementService {
         let get_plots_request = request.into_inner();
 
         // Validate JWT
-        let jwt_token = self.jwt.decode_jwt_token(&get_plots_request.jwt_token)?;
-        if jwt_token.claims.permissions.is_empty() {
-            return Err(Status::permission_denied("Invalid permissions"));
-        }
+        self.jwt.decode_jwt_token(&get_plots_request.jwt_token)?;
 
         let allowed_ownership_states: Vec<OwnershipState> = get_plots_request
             .allowed_ownership_states
@@ -188,6 +188,55 @@ impl PropertyManagement for PropertyManagementService {
             plots: plots.iter().map(|plot| plot.into()).collect(),
         }))
     }
+
+    async fn create_ownership(
+        &self,
+        request: Request<OwnershipCreationRequest>,
+    ) -> Result<Response<Ownership>, Status> {
+        let mut conn = self
+            .database_connection_pool
+            .get()
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let request = request.into_inner();
+
+        // Validate JWT token
+        let jwt = self.jwt.decode_jwt_token(&request.jwt_token)?;
+
+        // Check permission
+        if !jwt
+            .claims
+            .permissions
+            .contains(&PermissionType::ModifyOwnerships.to_string())
+        {
+            return Err(Status::permission_denied("Insufficient permissions"));
+        }
+
+        // Create ownership in DB
+        let ownership = OwnershipModel::create_ownership(
+            &mut conn,
+            request.user_id,
+            request.plot_id,
+            request.state.try_into().map_err(|_e| {
+                Status::invalid_argument(format!("Invalid state: {:?}", request.state))
+            })?,
+            request.total_sale_value,
+            request.monthly_repayment_amount,
+        )?;
+
+        // Fetch the user to get username
+        let user = UserModel::get_user_by_user_id(&mut conn, request.user_id)?;
+
+        Ok(Response::new(Ownership {
+            ownership_id: ownership.ownership_id,
+            user_id: user.user_id,
+            user_name: user.user_name,
+            plot_id: ownership.plot_id,
+            state: ownership.state.into(),
+            total_sale_value: ownership.total_sale_value,
+            monthly_repayment_amount: ownership.monthly_repayment_amount,
+        }))
+    }
 }
 
 #[cfg(test)]
@@ -212,7 +261,7 @@ mod tests {
         let request = EstateCreationRequest {
             jwt_token: service.jwt.encode_jwt_token(
                 ClaimsBuilder::new("user")
-                    .permission(PermissionType::UpdateEstates.to_string())
+                    .permission(PermissionType::ModifyProperties.to_string())
                     .build(),
             ),
             name: "Test Estate".to_string(),
@@ -309,7 +358,7 @@ mod tests {
         let request = PlotCreationRequest {
             jwt_token: service.jwt.encode_jwt_token(
                 ClaimsBuilder::new("user")
-                    .permission(PermissionType::UpdateEstates.to_string())
+                    .permission(PermissionType::ModifyProperties.to_string())
                     .build(),
             ),
             estate_id: estate.estate_id,
@@ -398,7 +447,7 @@ mod tests {
         let request = GetPlotsRequest {
             jwt_token: service.jwt.encode_jwt_token(
                 ClaimsBuilder::new("user")
-                    .permission(PermissionType::UpdateEstates.to_string())
+                    .permission(PermissionType::ModifyProperties.to_string())
                     .build(),
             ),
             plot_number: None,
@@ -440,9 +489,7 @@ mod tests {
             PlotModel::create_plot(&mut conn, estate.estate_id, "PN-2", "Phase X", 25, 35).unwrap();
 
         let request = GetPlotsRequest {
-            jwt_token: service
-                .jwt
-                .encode_jwt_token(ClaimsBuilder::new("user").build()),
+            jwt_token: "InvalidJwtToken".to_string(),
             plot_number: None,
             estate_id: None,
             phase: Some("Phase X".to_string()),
@@ -452,6 +499,82 @@ mod tests {
         let result = service.get_plots(Request::new(request)).await;
 
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err().code(), tonic::Code::PermissionDenied);
+        assert_eq!(result.unwrap_err().code(), tonic::Code::Unauthenticated);
+    }
+
+    #[tokio::test]
+    async fn test_create_ownership_with_permission() {
+        let pool = crate::tests::get_test_db_connection_pool(
+            "estate_service_test_create_ownership_with_permission",
+        );
+        let mut conn = pool.get().unwrap();
+
+        let service = PropertyManagementService {
+            database_connection_pool: pool.clone(),
+            jwt: Jwt::new("a-string-secret-at-least-256-bits-long"),
+        };
+
+        // Setup test user and plot
+        let user = crate::model::tests::create_test_user(&mut conn);
+        let estate = crate::model::tests::create_test_estate(&mut conn);
+        let plot =
+            PlotModel::create_plot(&mut conn, estate.estate_id, "P123", "Alpha", 50, 40).unwrap();
+
+        let request = OwnershipCreationRequest {
+            jwt_token: service.jwt.encode_jwt_token(
+                ClaimsBuilder::new("admin")
+                    .permission(PermissionType::ModifyOwnerships.to_string())
+                    .build(),
+            ),
+            user_id: user.user_id,
+            plot_id: plot.plot_id,
+            state: OwnershipState::ActivePayment.into(),
+            total_sale_value: 100_000,
+            monthly_repayment_amount: 2_000,
+        };
+
+        let response = service
+            .create_ownership(Request::new(request))
+            .await
+            .unwrap()
+            .into_inner();
+
+        assert_eq!(response.user_id, user.user_id);
+        assert_eq!(response.user_name, user.user_name);
+        assert_eq!(response.plot_id, plot.plot_id);
+        assert_eq!(
+            response.state,
+            Into::<i32>::into(OwnershipState::ActivePayment)
+        );
+        assert_eq!(response.total_sale_value, 100_000);
+        assert_eq!(response.monthly_repayment_amount, 2_000);
+    }
+
+    #[tokio::test]
+    async fn test_create_ownership_without_permission() {
+        let pool = crate::tests::get_test_db_connection_pool(
+            "estate_service_test_create_ownership_without_permission",
+        );
+
+        let service = PropertyManagementService {
+            database_connection_pool: pool.clone(),
+            jwt: Jwt::new("a-string-secret-at-least-256-bits-long"),
+        };
+
+        let request = OwnershipCreationRequest {
+            jwt_token: service
+                .jwt
+                .encode_jwt_token(ClaimsBuilder::new("basic_user").build()),
+            user_id: 1,
+            plot_id: 1,
+            state: OwnershipState::ActivePayment.into(),
+            total_sale_value: 50_000,
+            monthly_repayment_amount: 1_000,
+        };
+
+        let response = service.create_ownership(Request::new(request)).await;
+
+        assert!(response.is_err());
+        assert_eq!(response.unwrap_err().code(), tonic::Code::PermissionDenied);
     }
 }

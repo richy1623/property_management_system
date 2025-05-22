@@ -1,13 +1,15 @@
 use diesel::{insert_into, prelude::*};
 use diesel_derive_enum::DbEnum;
-use num_enum::TryFromPrimitive;
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 
 use crate::schema::ownership;
 
 use super::Error;
 
-#[derive(Debug, Clone, PartialEq, Eq, DbEnum, Serialize, Deserialize, TryFromPrimitive)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, DbEnum, Serialize, Deserialize, TryFromPrimitive, IntoPrimitive,
+)]
 #[repr(i32)]
 #[db_enum(
     existing_type_path = "crate::schema::sql_types::OwnershipState",

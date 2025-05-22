@@ -163,8 +163,13 @@ pub mod tests {
             user.user_id,
             vec![
                 PermissionType::ViewPayments,
-                PermissionType::EditPayments,
-                PermissionType::ManageUsers,
+                PermissionType::ModifyPayments,
+                PermissionType::ViewUsers,
+                PermissionType::ModifyUsers,
+                PermissionType::ViewProperties,
+                PermissionType::ModifyProperties,
+                PermissionType::ViewOwnerships,
+                PermissionType::ModifyOwnerships,
                 PermissionType::ViewReports,
             ],
         )

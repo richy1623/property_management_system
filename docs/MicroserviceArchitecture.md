@@ -3,18 +3,19 @@
 ```mermaid
 flowchart LR
   subgraph Frontend
-    Web1[Web Application]
+    Web1[Management Web Application]
     Web2[Web Application]
     Mobile[Mobile]
   end
 
   subgraph APIGW[API Gateway]
+    ManagementGateway[Management API Gateway]
     Gateway[API Gateway]
   end
 
   subgraph Backend["Backend Services"]
-    UMS[User Management Service]
-    Auth[Authentication Service]
+    UMS[User Management + Authentication Service]
+    Property[Property Management Service]
     Finance[Payment Management Service]
     File[Archive Management Service]
     Email[Email Service]
@@ -25,16 +26,19 @@ flowchart LR
     Archive[[Archive]]
   end
 
-  Web1 --> UMS
+  Web1 --> ManagementGateway
   Web2 --> Gateway
   Mobile --> Gateway
 
-  Gateway --> Auth
+  ManagementGateway --> UMS
+  ManagementGateway --> Property
+  ManagementGateway --> Finance
+  Gateway --> UMS
+  Gateway --> Property
   Gateway --> Finance
 
-  UMS --> Auth
   UMS --> DB
-  Auth --> DB
+  Property --> DB
   Finance --> DB
   Finance --> File
   File --> Archive
