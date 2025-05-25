@@ -49,3 +49,6 @@ message ListUsersRequest {
 message ListUsersResponse {
     repeated User users = 1;
 }
+
+// TODO
+// grant user permissions

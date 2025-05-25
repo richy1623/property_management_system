@@ -10,14 +10,14 @@ use crate::{
     jwt::Jwt,
     model::{
         ownership::Ownership,
-        payment::{Payment, PaymentState},
+        payment::{Payment as PaymentModel, PaymentState},
         user::User,
         user_permission::PermissionType,
     },
 };
 
 use super::payment_management_proto::{
-    PaymentCreationRequest, PaymentCreationResponse, payment_management_server::PaymentManagement,
+    Payment, PaymentCreationRequest, payment_management_server::PaymentManagement,
 };
 
 pub struct PaymentManagementService {
@@ -48,7 +48,7 @@ impl PaymentManagement for PaymentManagementService {
     async fn create_payment(
         &self,
         request: Request<PaymentCreationRequest>,
-    ) -> Result<Response<PaymentCreationResponse>, Status> {
+    ) -> Result<Response<Payment>, Status> {
         let mut conn = match self.database_connection_pool.clone().get() {
             Ok(conn) => conn,
             Err(e) => return Err(Status::internal(e.to_string())),
@@ -75,7 +75,7 @@ impl PaymentManagement for PaymentManagementService {
 
         let ownership = Ownership::get_ownership(&mut conn, payment_creation_request.ownership_id)?;
 
-        let payment = Payment::create_payment(
+        let payment = PaymentModel::create_payment(
             &mut conn,
             ownership.ownership_id,
             payment_creation_request.date.unwrap().into(),
@@ -87,9 +87,7 @@ impl PaymentManagement for PaymentManagementService {
             "payment_creation_request.proof_of_payment_path",
         )?;
 
-        Ok(Response::new(PaymentCreationResponse {
-            message: format!("Created payment: {:?}", payment),
-        }))
+        Ok(Response::new((&payment).into()))
     }
 }
 
@@ -141,17 +139,20 @@ mod tests {
             proof_of_payment_path: "/path/to/proof.pdf".to_string(),
         };
 
-        let result = service.create_payment(Request::new(request)).await;
+        let payment = service
+            .create_payment(Request::new(request))
+            .await
+            .unwrap()
+            .into_inner();
 
-        assert!(result.is_ok());
-        assert!(
-            result
-                .as_ref()
+        let payment_inserted: Payment =
+            PaymentModel::get_all_payments_for_ownership_id(&mut conn, ownership.ownership_id)
                 .unwrap()
-                .get_ref()
-                .message
-                .contains("Created payment")
-        );
+                .get(0)
+                .unwrap()
+                .into();
+
+        assert_eq!(payment, payment_inserted);
     }
 
     #[rstest]
