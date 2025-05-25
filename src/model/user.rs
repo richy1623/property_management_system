@@ -54,7 +54,8 @@ impl User {
                 user::cellphone_number.eq(cellphone_number),
                 user::email_address.eq(email_address),
                 user::identification_number.eq(identification_number),
-                user::password_hash.eq(User::hash_password(&password).expect("TODO")),
+                user::password_hash.eq(User::hash_password(&password)
+                    .map_err(|error| Error::InternalError(error.to_string()))?),
             ))
             .get_result(conn)
             .map_err(Into::into)

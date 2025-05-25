@@ -13,6 +13,7 @@ pub enum Error {
     DatabaseError(diesel::result::Error),
     CryptographyError(password_hash::Error),
     AuthorizationError(jsonwebtoken::errors::Error),
+    InternalError(String),
 }
 
 impl From<diesel::result::Error> for Error {
@@ -71,6 +72,7 @@ impl From<Error> for Status {
             Error::AuthorizationError(jwt_error) => {
                 Status::new(Code::Unauthenticated, jwt_error.to_string())
             }
+            Error::InternalError(message) => Status::new(Code::Internal, message),
         }
     }
 }
@@ -162,6 +164,7 @@ pub mod tests {
             conn,
             user.user_id,
             vec![
+                PermissionType::Employee,
                 PermissionType::ViewPayments,
                 PermissionType::ModifyPayments,
                 PermissionType::ViewUsers,

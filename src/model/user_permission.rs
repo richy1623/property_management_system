@@ -14,6 +14,7 @@ use super::Error;
 #[derive(strum::Display)]
 #[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 pub enum PermissionType {
+    Employee,
     ViewPayments,
     ModifyPayments,
     ViewUsers,

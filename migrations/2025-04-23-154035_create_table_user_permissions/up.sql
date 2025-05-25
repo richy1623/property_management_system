@@ -1,5 +1,6 @@
 -- Your SQL goes here
 CREATE TYPE permission_type AS ENUM (
+    'EMPLOYEE',
     'VIEW_PAYMENTS',
     'MODIFY_PAYMENTS',
     'VIEW_USERS',
