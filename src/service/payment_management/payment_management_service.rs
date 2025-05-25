@@ -5,6 +5,7 @@ use diesel::{
 use diesel_migrations::MigrationHarness;
 use tonic::{Request, Response, Status};
 
+use crate::model::user::User as UserModel;
 use crate::{
     MIGRATIONS,
     jwt::Jwt,
@@ -17,7 +18,8 @@ use crate::{
 };
 
 use super::payment_management_proto::{
-    Payment, PaymentCreationRequest, payment_management_server::PaymentManagement,
+    Payment, PaymentCreationRequest, PaymentStateUpdateRequest,
+    payment_management_server::PaymentManagement,
 };
 
 pub struct PaymentManagementService {
@@ -85,6 +87,45 @@ impl PaymentManagement for PaymentManagementService {
             &payment_creation_request.reference,
             user.user_id,
             "payment_creation_request.proof_of_payment_path",
+        )?;
+
+        Ok(Response::new((&payment).into()))
+    }
+
+    async fn update_payment_state(
+        &self,
+        request: Request<PaymentStateUpdateRequest>,
+    ) -> Result<Response<Payment>, Status> {
+        let mut conn = match self.database_connection_pool.clone().get() {
+            Ok(conn) => conn,
+            Err(e) => return Err(Status::internal(e.to_string())),
+        };
+        let payment_state_update_request = request.get_ref();
+
+        // Validate perms
+        let jwt_token = self
+            .jwt
+            .decode_jwt_token(&payment_state_update_request.jwt_token)?;
+
+        if !jwt_token
+            .claims
+            .permissions
+            .contains(&PermissionType::ModifyPayments.to_string())
+        {
+            return Err(Status::permission_denied(
+                "Insufficient permissions to make payment",
+            ));
+        }
+
+        let user_making_update =
+            UserModel::get_user_by_user_name(&mut conn, &jwt_token.claims.sub)?;
+
+        let payment = PaymentModel::update_payment_state(
+            &mut conn,
+            payment_state_update_request.payment_id,
+            PaymentState::try_from(payment_state_update_request.state).unwrap(),
+            user_making_update.user_id,
+            &payment_state_update_request.comment,
         )?;
 
         Ok(Response::new((&payment).into()))
@@ -195,5 +236,94 @@ mod tests {
 
         assert!(result.is_err());
         assert_eq!(result.unwrap_err().code(), tonic::Code::PermissionDenied);
+    }
+
+    #[tokio::test]
+    async fn test_update_payment_state_with_permission() {
+        let pool = crate::tests::get_test_db_connection_pool(
+            "payment_service_test_update_payment_state_with_permission",
+        );
+        let mut conn = pool.get().unwrap();
+
+        let service = PaymentManagementService {
+            database_connection_pool: pool.clone(),
+            jwt: Jwt::new("a-string-secret-at-least-256-bits-long"),
+        };
+
+        // Setup test data
+
+        let user = crate::model::tests::create_test_user(&mut conn);
+        let estate = crate::model::tests::create_test_estate(&mut conn);
+        let plot = crate::model::tests::create_test_plot(&mut conn, &estate);
+        let ownership = crate::model::tests::create_test_ownership(&mut conn, &plot, &user);
+        let payment = crate::model::tests::create_test_payment(&mut conn, &ownership, &user);
+
+        // Encode token with permission
+        let jwt_token = service.jwt.encode_jwt_token(
+            ClaimsBuilder::new(&user.user_name)
+                .permission(PermissionType::ModifyPayments.to_string())
+                .build(),
+        );
+
+        // Call service
+        let request = PaymentStateUpdateRequest {
+            jwt_token,
+            payment_id: payment.payment_id,
+            state: PaymentState::Approved.into(),
+            comment: "Approved by admin".into(),
+        };
+
+        let response = service
+            .update_payment_state(Request::new(request))
+            .await
+            .unwrap()
+            .into_inner();
+
+        // Assert gRPC response
+        assert_eq!(response.payment_id, payment.payment_id);
+        assert_eq!(response.state, Into::<i32>::into(PaymentState::Approved));
+        assert_eq!(response.comment, "Approved by admin");
+        assert_eq!(response.last_changed_by_user, user.user_id);
+
+        // --- DB verification ---
+        let updated_payment = PaymentModel::get_payment(&mut conn, payment.payment_id).unwrap();
+        assert_eq!(updated_payment.state, PaymentState::Approved);
+        assert_eq!(updated_payment.comment, "Approved by admin".to_string());
+        assert_eq!(updated_payment.last_changed_by_user, user.user_id);
+    }
+
+    #[tokio::test]
+    async fn test_update_payment_state_without_permission() {
+        let pool = crate::tests::get_test_db_connection_pool(
+            "payment_service_test_update_payment_state_without_permission",
+        );
+        let mut conn = pool.get().unwrap();
+
+        let service = PaymentManagementService {
+            database_connection_pool: pool.clone(),
+            jwt: Jwt::new("a-string-secret-at-least-256-bits-long"),
+        };
+
+        let user = crate::model::tests::create_test_user(&mut conn);
+        let estate = crate::model::tests::create_test_estate(&mut conn);
+        let plot = crate::model::tests::create_test_plot(&mut conn, &estate);
+        let ownership = crate::model::tests::create_test_ownership(&mut conn, &plot, &user);
+        let payment = crate::model::tests::create_test_payment(&mut conn, &ownership, &user);
+
+        let jwt_token = service
+            .jwt
+            .encode_jwt_token(ClaimsBuilder::new(&user.user_name).build());
+
+        let request = PaymentStateUpdateRequest {
+            jwt_token,
+            payment_id: payment.payment_id,
+            state: PaymentState::Rejected.into(),
+            comment: "No reason".into(),
+        };
+
+        let response = service.update_payment_state(Request::new(request)).await;
+
+        assert!(response.is_err());
+        assert_eq!(response.unwrap_err().code(), tonic::Code::PermissionDenied);
     }
 }

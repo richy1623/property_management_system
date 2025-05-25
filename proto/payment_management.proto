@@ -5,6 +5,8 @@ package property_management_system.payment_management;
 
 service PaymentManagement {
     rpc CreatePayment (PaymentCreationRequest) returns (Payment);
+
+    rpc UpdatePaymentState(PaymentStateUpdateRequest) returns (Payment);
 }
 
 message PaymentCreationRequest {
@@ -35,8 +37,14 @@ message Payment {
     // TODO handle stored objects better
 }
 
+message PaymentStateUpdateRequest {
+    string jwt_token = 1;
+    int32 payment_id = 2;
+    PaymentState state = 3;
+    string comment = 4;
+}
+
 // TODO
-// Approve Payments 
 // Get Payments
 // ?See Audit log?
 
