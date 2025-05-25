@@ -7,6 +7,9 @@ service PaymentManagement {
     rpc CreatePayment (PaymentCreationRequest) returns (Payment);
 
     rpc UpdatePaymentState(PaymentStateUpdateRequest) returns (Payment);
+
+    rpc GetPaymentsForOwnership(GetPaymentsForOwnershipRequest) returns (PaymentList);
+    rpc GetPaymentsInState(GetPaymentsInStateRequest) returns (PaymentList);
 }
 
 message PaymentCreationRequest {
@@ -44,8 +47,23 @@ message PaymentStateUpdateRequest {
     string comment = 4;
 }
 
+message GetPaymentsForOwnershipRequest {
+    string jwt_token = 1;
+    int32 ownership_id = 2;
+}
+
+message GetPaymentsInStateRequest {
+    string jwt_token = 1;
+    PaymentState state = 2;
+    int32 offset = 3;
+    int32 limit = 4;
+}
+
+message PaymentList {
+    repeated Payment payments = 1;
+}
+
 // TODO
-// Get Payments
 // ?See Audit log?
 
 

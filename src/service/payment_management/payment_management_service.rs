@@ -5,12 +5,12 @@ use diesel::{
 use diesel_migrations::MigrationHarness;
 use tonic::{Request, Response, Status};
 
-use crate::model::user::User as UserModel;
+use crate::model::{ownership::Ownership, user::User as UserModel};
 use crate::{
     MIGRATIONS,
     jwt::Jwt,
     model::{
-        ownership::Ownership,
+        ownership::Ownership as OwnershipModel,
         payment::{Payment as PaymentModel, PaymentState},
         user::User,
         user_permission::PermissionType,
@@ -18,8 +18,8 @@ use crate::{
 };
 
 use super::payment_management_proto::{
-    Payment, PaymentCreationRequest, PaymentStateUpdateRequest,
-    payment_management_server::PaymentManagement,
+    GetPaymentsForOwnershipRequest, GetPaymentsInStateRequest, Payment, PaymentCreationRequest,
+    PaymentList, PaymentStateUpdateRequest, payment_management_server::PaymentManagement,
 };
 
 pub struct PaymentManagementService {
@@ -129,6 +129,88 @@ impl PaymentManagement for PaymentManagementService {
         )?;
 
         Ok(Response::new((&payment).into()))
+    }
+
+    async fn get_payments_for_ownership(
+        &self,
+        request: Request<GetPaymentsForOwnershipRequest>,
+    ) -> Result<Response<PaymentList>, Status> {
+        let get_payments_request = request.into_inner();
+
+        let mut conn = match self.database_connection_pool.clone().get() {
+            Ok(conn) => conn,
+            Err(e) => return Err(Status::internal(e.to_string())),
+        };
+
+        // Validate JWT
+        let jwt_token = self.jwt.decode_jwt_token(&get_payments_request.jwt_token)?;
+
+        let ownership =
+            OwnershipModel::get_ownership(&mut conn, get_payments_request.ownership_id)?;
+        let user = UserModel::get_user_by_user_id(&mut conn, ownership.user_id)?;
+
+        if jwt_token.claims.sub != user.user_name
+            && !jwt_token
+                .claims
+                .permissions
+                .contains(&PermissionType::ViewPayments.to_string())
+        {
+            return Err(Status::permission_denied(
+                "Insufficient permissions to view payments",
+            ));
+        }
+
+        let payments = PaymentModel::get_all_payments_for_ownership_id(
+            &mut conn,
+            get_payments_request.ownership_id,
+        )?;
+
+        let payments = payments
+            .into_iter()
+            .map(|payment| (&payment).into())
+            .collect();
+
+        Ok(Response::new(PaymentList { payments: payments }))
+    }
+
+    async fn get_payments_in_state(
+        &self,
+        request: Request<GetPaymentsInStateRequest>,
+    ) -> Result<Response<PaymentList>, Status> {
+        let req = request.into_inner();
+
+        let mut conn = match self.database_connection_pool.clone().get() {
+            Ok(conn) => conn,
+            Err(e) => return Err(Status::internal(e.to_string())),
+        };
+
+        // Validate JWT
+        let jwt_token = self.jwt.decode_jwt_token(&req.jwt_token)?;
+
+        if !jwt_token
+            .claims
+            .permissions
+            .contains(&PermissionType::ViewPayments.to_string())
+        {
+            return Err(Status::permission_denied(
+                "Insufficient permissions to view payments",
+            ));
+        }
+
+        let payments = PaymentModel::get_all_payments_in_state(
+            &mut conn,
+            PaymentState::try_from(req.state)
+                .map_err(|e| Status::invalid_argument(e.to_string()))?,
+            req.offset as i64,
+            req.limit as i64,
+        )?;
+
+        let payments = payments
+            .into_iter()
+            .map(|payment| (&payment).into())
+            .collect();
+
+        Ok(Response::new(PaymentList { payments: payments }))
     }
 }
 
@@ -251,7 +333,6 @@ mod tests {
         };
 
         // Setup test data
-
         let user = crate::model::tests::create_test_user(&mut conn);
         let estate = crate::model::tests::create_test_estate(&mut conn);
         let plot = crate::model::tests::create_test_plot(&mut conn, &estate);
@@ -325,5 +406,150 @@ mod tests {
 
         assert!(response.is_err());
         assert_eq!(response.unwrap_err().code(), tonic::Code::PermissionDenied);
+    }
+
+    #[tokio::test]
+    async fn test_get_payments_for_ownership() {
+        let pool = crate::tests::get_test_db_connection_pool("test_get_payments_for_ownership");
+        let mut conn = pool.get().unwrap();
+
+        let service = PaymentManagementService {
+            database_connection_pool: pool.clone(),
+            jwt: Jwt::new("a-string-secret-at-least-256-bits-long"),
+        };
+
+        let user = crate::model::tests::create_test_user(&mut conn);
+        let estate = crate::model::tests::create_test_estate(&mut conn);
+        let plot = crate::model::tests::create_test_plot(&mut conn, &estate);
+        let ownership = crate::model::tests::create_test_ownership(&mut conn, &plot, &user);
+        let payment_1 = crate::model::tests::create_test_payment(&mut conn, &ownership, &user);
+        let payment_2 = crate::model::tests::create_test_payment(&mut conn, &ownership, &user);
+
+        let expected_payments = vec![(&payment_1).into(), (&payment_2).into()];
+
+        let jwt_token = service.jwt.encode_jwt_token(
+            ClaimsBuilder::new(&user.user_name)
+                .permission(PermissionType::ViewPayments.to_string())
+                .build(),
+        );
+
+        let request = GetPaymentsForOwnershipRequest {
+            jwt_token,
+            ownership_id: ownership.ownership_id,
+        };
+
+        let response = service
+            .get_payments_for_ownership(Request::new(request))
+            .await
+            .unwrap()
+            .into_inner();
+
+        assert_eq!(response.payments, expected_payments);
+    }
+
+    #[tokio::test]
+    async fn test_get_payments_in_state() {
+        let pool = crate::tests::get_test_db_connection_pool("test_get_payments_in_state");
+        let mut conn = pool.get().unwrap();
+
+        let service = PaymentManagementService {
+            database_connection_pool: pool.clone(),
+            jwt: Jwt::new("a-string-secret-at-least-256-bits-long"),
+        };
+
+        let user = crate::model::tests::create_test_user(&mut conn);
+        let estate = crate::model::tests::create_test_estate(&mut conn);
+        let plot = crate::model::tests::create_test_plot(&mut conn, &estate);
+        let ownership = crate::model::tests::create_test_ownership(&mut conn, &plot, &user);
+        let payment = crate::model::tests::create_test_payment(&mut conn, &ownership, &user);
+
+        let expected_payments = vec![(&payment).into()];
+
+        let jwt_token = service.jwt.encode_jwt_token(
+            ClaimsBuilder::new(&user.user_name)
+                .permission(PermissionType::ViewPayments.to_string())
+                .build(),
+        );
+
+        let request = GetPaymentsInStateRequest {
+            jwt_token,
+            state: PaymentState::PendingApproval as i32,
+            offset: 0,
+            limit: 10,
+        };
+
+        let response = service
+            .get_payments_in_state(Request::new(request))
+            .await
+            .unwrap()
+            .into_inner();
+
+        assert_eq!(response.payments, expected_payments);
+    }
+
+    #[tokio::test]
+    async fn test_get_payments_for_ownership_permission_denied() {
+        let pool = crate::tests::get_test_db_connection_pool(
+            "test_get_payments_for_ownership_permission_denied",
+        );
+        let mut conn = pool.get().unwrap();
+
+        let service = PaymentManagementService {
+            database_connection_pool: pool.clone(),
+            jwt: Jwt::new("a-string-secret-at-least-256-bits-long"),
+        };
+
+        let user_valid = crate::model::tests::create_test_user(&mut conn);
+        let user_invalid = crate::model::tests::create_test_user(&mut conn);
+        let estate = crate::model::tests::create_test_estate(&mut conn);
+        let plot = crate::model::tests::create_test_plot(&mut conn, &estate);
+        let ownership = crate::model::tests::create_test_ownership(&mut conn, &plot, &user_valid);
+
+        let jwt_token = service.jwt.encode_jwt_token(
+            ClaimsBuilder::new(&user_invalid.user_name).build(), // No permissions
+        );
+
+        let request = GetPaymentsForOwnershipRequest {
+            jwt_token,
+            ownership_id: ownership.ownership_id,
+        };
+
+        let result = service
+            .get_payments_for_ownership(Request::new(request))
+            .await;
+
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code(), tonic::Code::PermissionDenied);
+    }
+
+    #[tokio::test]
+    async fn test_get_payments_in_state_permission_denied() {
+        let pool = crate::tests::get_test_db_connection_pool(
+            "test_get_payments_in_state_permission_denied",
+        );
+        let mut conn = pool.get().unwrap();
+
+        let service = PaymentManagementService {
+            database_connection_pool: pool.clone(),
+            jwt: Jwt::new("a-string-secret-at-least-256-bits-long"),
+        };
+
+        let user = crate::model::tests::create_test_user(&mut conn);
+
+        let jwt_token = service.jwt.encode_jwt_token(
+            ClaimsBuilder::new(&user.user_name).build(), // No permissions
+        );
+
+        let request = GetPaymentsInStateRequest {
+            jwt_token,
+            state: PaymentState::PendingApproval as i32,
+            offset: 0,
+            limit: 10,
+        };
+
+        let result = service.get_payments_in_state(Request::new(request)).await;
+
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code(), tonic::Code::PermissionDenied);
     }
 }

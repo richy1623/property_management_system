@@ -89,3 +89,5 @@ message Ownership {
     int32 total_sale_value = 6;
     int32 monthly_repayment_amount = 7;
 }
+
+// TODO get ownerships for user
