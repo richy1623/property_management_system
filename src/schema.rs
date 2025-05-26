@@ -15,6 +15,16 @@ pub mod sql_types {
 }
 
 diesel::table! {
+    artifact (artifact_id) {
+        artifact_id -> Int4,
+        file_display_name -> Text,
+        file_path -> Text,
+        upload_date -> Date,
+        uploaded_by -> Int4,
+    }
+}
+
+diesel::table! {
     estate (estate_id) {
         estate_id -> Int4,
         name -> Text,
@@ -103,6 +113,7 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(artifact -> user (uploaded_by));
 diesel::joinable!(ownership -> plot (plot_id));
 diesel::joinable!(ownership -> user (user_id));
 diesel::joinable!(payment -> ownership (ownership_id));
@@ -113,6 +124,7 @@ diesel::joinable!(plot -> estate (estate_id));
 diesel::joinable!(user_permission -> user (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    artifact,
     estate,
     ownership,
     payment,

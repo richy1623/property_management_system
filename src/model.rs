@@ -1,5 +1,6 @@
 use tonic::{Code, Status};
 
+pub mod artifact;
 pub mod estate;
 pub mod ownership;
 pub mod payment;
@@ -84,6 +85,7 @@ pub mod tests {
     use uuid::Uuid;
 
     use super::{
+        artifact::Artifact,
         estate::Estate,
         ownership::Ownership,
         payment::{Payment, PaymentState},
@@ -155,6 +157,17 @@ pub mod tests {
             "reference",
             user.user_id,
             "path/to/payment",
+        )
+        .unwrap()
+    }
+
+    pub fn create_test_artifact(conn: &mut PgConnection, user: &User, file_path: &str) -> Artifact {
+        Artifact::create_artifact(
+            conn,
+            &Uuid::new_v4().to_string(),
+            file_path,
+            NaiveDate::from_ymd_opt(2025, 09, 05).unwrap(),
+            user.user_id,
         )
         .unwrap()
     }

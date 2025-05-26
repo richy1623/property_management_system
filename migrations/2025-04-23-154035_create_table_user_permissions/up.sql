@@ -17,7 +17,7 @@ CREATE TABLE
         user_id INTEGER NOT NULL,
         permission permission_type NOT NULL,
         PRIMARY KEY (user_id, permission),
-        CONSTRAINT fk_user_permission_user FOREIGN KEY (user_id) REFERENCES "user" (user_id)
+        CONSTRAINT fk_user_permission_user FOREIGN KEY (user_id) REFERENCES "user" (user_id) ON DELETE CASCADE
     );
 
 CREATE INDEX idx__user_permission__user_id ON user_permission (user_id);
