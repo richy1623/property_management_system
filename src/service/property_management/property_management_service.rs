@@ -7,7 +7,7 @@ use tonic::{Request, Response, Status};
 
 use super::property_management_proto::{
     Empty, Estate, EstateCreationRequest, EstateList, GetPlotsRequest, Ownership,
-    OwnershipCreationRequest, Plot, PlotCreationRequest, PlotList,
+    OwnershipCreationRequest, OwnershipUpdateRequest, Plot, PlotCreationRequest, PlotList,
     property_management_server::PropertyManagement,
 };
 use crate::model::ownership::Ownership as OwnershipModel;
@@ -236,6 +236,61 @@ impl PropertyManagement for PropertyManagementService {
             total_sale_value: ownership.total_sale_value,
             monthly_repayment_amount: ownership.monthly_repayment_amount,
         }))
+    }
+
+    async fn update_ownership(
+        &self,
+        request: Request<OwnershipUpdateRequest>,
+    ) -> Result<Response<Ownership>, Status> {
+        let OwnershipUpdateRequest {
+            jwt_token,
+            ownership_id,
+            state,
+            total_sale_value,
+            monthly_repayment_amount,
+        } = request.into_inner();
+
+        // Get DB connection
+        let mut conn = self
+            .database_connection_pool
+            .clone()
+            .get()
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        // Decode and validate JWT
+        let jwt_token = self.jwt.decode_jwt_token(&jwt_token)?;
+        if !jwt_token
+            .claims
+            .permissions
+            .contains(&PermissionType::ModifyOwnerships.to_string())
+        {
+            return Err(Status::permission_denied(
+                "Insufficient permissions to modify ownerships",
+            ));
+        }
+
+        // Get user making update
+        let user_making_update =
+            UserModel::get_user_by_user_name(&mut conn, &jwt_token.claims.sub)?;
+
+        // Parse ownership state from i32 to enum
+        let new_ownership_state =
+            OwnershipState::try_from(state).map_err(|e| Status::invalid_argument(e.to_string()))?;
+
+        // Update ownership
+        let updated_ownership = OwnershipModel::update_ownership(
+            &mut conn,
+            ownership_id,
+            new_ownership_state,
+            total_sale_value,
+            monthly_repayment_amount,
+            user_making_update.user_id,
+        )?;
+
+        Ok(Response::new(Ownership::from_model_and_user(
+            &updated_ownership,
+            &user_making_update,
+        )))
     }
 }
 
@@ -576,5 +631,60 @@ mod tests {
 
         assert!(response.is_err());
         assert_eq!(response.unwrap_err().code(), tonic::Code::PermissionDenied);
+    }
+
+    #[tokio::test]
+    async fn test_update_ownership() {
+        let pool =
+            crate::tests::get_test_db_connection_pool("estate_service_test_update_ownership");
+
+        let mut conn = pool.get().unwrap();
+
+        // Create test ownership
+        let user = crate::model::tests::create_test_user(&mut conn);
+        let estate = crate::model::tests::create_test_estate(&mut conn);
+        let plot = crate::model::tests::create_test_plot(&mut conn, &estate);
+        let ownership = crate::model::tests::create_test_ownership(&mut conn, &plot, &user);
+
+        let service = PropertyManagementService {
+            database_connection_pool: pool.clone(),
+            jwt: Jwt::new("a-secret-at-least-256-bits-long"),
+        };
+
+        // Perform update
+        let ownership_update_request = OwnershipUpdateRequest {
+            jwt_token: service.jwt.encode_jwt_token(
+                ClaimsBuilder::new("admin")
+                    .permission(PermissionType::ModifyOwnerships.to_string())
+                    .build(),
+            ),
+            ownership_id: ownership.ownership_id,
+            state: OwnershipState::Paid.into(),
+            total_sale_value: 10,
+            monthly_repayment_amount: 1,
+        };
+
+        let response = service
+            .update_ownership(Request::new(ownership_update_request))
+            .await
+            .unwrap();
+
+        let updated = response.into_inner();
+
+        // Check returned values
+        assert_eq!(updated.ownership_id, ownership.ownership_id);
+        assert_eq!(updated.state, OwnershipState::Paid as i32);
+        assert_eq!(updated.total_sale_value, 10);
+        assert_eq!(updated.monthly_repayment_amount, 1);
+        assert_eq!(updated.plot_id, ownership.plot_id);
+        assert_eq!(updated.user_id, ownership.user_id);
+
+        // Confirm persisted changes
+        let db_ownership = Ownership::from_model_and_user(
+            &OwnershipModel::get_ownership(&mut conn, ownership.ownership_id).unwrap(),
+            &user,
+        );
+
+        assert_eq!(db_ownership, updated);
     }
 }

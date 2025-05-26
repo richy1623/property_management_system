@@ -9,6 +9,8 @@ service PropertyManagement {
     rpc GetPlots (GetPlotsRequest) returns (PlotList);
 
     rpc CreateOwnership (OwnershipCreationRequest) returns (Ownership);
+
+    rpc UpdateOwnership (OwnershipUpdateRequest) returns (Ownership);
 }
 
 message Empty {}
@@ -90,4 +92,13 @@ message Ownership {
     int32 monthly_repayment_amount = 7;
 }
 
-// TODO get ownerships for user
+message OwnershipUpdateRequest {
+    string jwt_token = 1;
+    int32 ownership_id = 2;
+    OwnershipState state = 3;
+    int32 total_sale_value = 4;
+    int32 monthly_repayment_amount = 5;
+}
+
+// TODO 
+// get ownerships for user

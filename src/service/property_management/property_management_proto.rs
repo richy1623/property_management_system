@@ -1,3 +1,5 @@
+use crate::model::user::User;
+
 tonic::include_proto!("property_management_system.property_management");
 
 impl From<crate::model::estate::Estate> for Estate {
@@ -21,6 +23,23 @@ impl From<&crate::model::plot::Plot> for Plot {
             phase: plot.phase.clone(),
             length: plot.length,
             width: plot.width,
+        }
+    }
+}
+
+impl Ownership {
+    pub fn from_model_and_user(
+        ownership: &crate::model::ownership::Ownership,
+        user: &User,
+    ) -> Self {
+        Ownership {
+            ownership_id: ownership.ownership_id,
+            user_id: ownership.user_id,
+            user_name: user.user_name.clone(),
+            plot_id: ownership.plot_id.clone(),
+            state: ownership.state.clone().into(),
+            total_sale_value: ownership.total_sale_value,
+            monthly_repayment_amount: ownership.monthly_repayment_amount,
         }
     }
 }

@@ -88,6 +88,25 @@ impl Ownership {
             .get_results(conn)
             .map_err(Into::into)
     }
+
+    pub fn update_ownership(
+        conn: &mut PgConnection,
+        target_ownership_id: i32,
+        new_state: OwnershipState,
+        new_total_sale_value: i32,
+        new_monthly_repayment_amount: i32,
+        _updated_by_user_id: i32, // reserved for auditing/logging
+    ) -> Result<Ownership, Error> {
+        // TODO audit log
+        diesel::update(ownership::table.filter(ownership::ownership_id.eq(target_ownership_id)))
+            .set((
+                ownership::state.eq(new_state),
+                ownership::total_sale_value.eq(new_total_sale_value),
+                ownership::monthly_repayment_amount.eq(new_monthly_repayment_amount),
+            ))
+            .get_result(conn)
+            .map_err(Into::into)
+    }
 }
 
 #[cfg(test)]
@@ -195,5 +214,38 @@ mod tests {
             Ownership::get_all_ownerships_for_user_id(&mut conn, user_other.user_id).unwrap(),
             vec![ownership_other]
         );
+    }
+
+    #[rstest]
+    pub fn test_update_ownership_state(pool: &Pool<ConnectionManager<PgConnection>>) {
+        let mut conn = pool.clone().get().unwrap();
+
+        let estate = crate::model::tests::create_test_estate(&mut conn);
+
+        let plot = crate::model::tests::create_test_plot(&mut conn, &estate);
+
+        let user = crate::model::tests::create_test_user(&mut conn);
+
+        let ownership = crate::model::tests::create_test_ownership(&mut conn, &plot, &user);
+
+        let update_ownership = Ownership::update_ownership(
+            &mut conn,
+            ownership.ownership_id,
+            OwnershipState::Paid,
+            10,
+            1,
+            user.user_id,
+        )
+        .unwrap();
+
+        assert_eq!(ownership.user_id, user.user_id);
+        assert_eq!(ownership.plot_id, plot.plot_id);
+        assert_eq!(ownership.state, OwnershipState::Paid);
+        assert_eq!(ownership.total_sale_value, 10);
+        assert_eq!(ownership.monthly_repayment_amount, 1);
+
+        let ownership_in_db = Ownership::get_ownership(&mut conn, ownership.ownership_id).unwrap();
+
+        assert_eq!(update_ownership, ownership_in_db);
     }
 }
