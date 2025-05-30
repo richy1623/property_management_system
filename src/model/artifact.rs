@@ -3,6 +3,7 @@ use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use super::Error;
+use chrono::Utc;
 
 #[derive(
     Queryable, Selectable, Insertable, Debug, PartialEq, Eq, Clone, Serialize, Deserialize,
@@ -22,14 +23,13 @@ impl Artifact {
         conn: &mut PgConnection,
         file_display_name: &str,
         file_path: &str,
-        upload_date: chrono::NaiveDate,
         uploaded_by: i32,
     ) -> Result<Artifact, Error> {
         diesel::insert_into(artifact::table)
             .values((
                 artifact::file_display_name.eq(file_display_name),
                 artifact::file_path.eq(file_path),
-                artifact::upload_date.eq(upload_date),
+                artifact::upload_date.eq(Utc::now().date_naive()),
                 artifact::uploaded_by.eq(uploaded_by),
             ))
             .get_result(conn)
@@ -47,14 +47,12 @@ impl Artifact {
 
 #[cfg(test)]
 mod tests {
-    use chrono::NaiveDate;
+    use super::*;
     use diesel::{
         PgConnection,
         r2d2::{ConnectionManager, Pool},
     };
     use rstest::{fixture, rstest};
-
-    use crate::model::artifact::Artifact;
 
     #[fixture]
     #[once]
@@ -68,22 +66,16 @@ mod tests {
 
         let file_display_name = "test_document.pdf";
         let file_path = "/tmp/test_document.pdf";
-        let upload_date = NaiveDate::from_ymd_opt(2025, 5, 26).unwrap();
 
         let user = crate::model::tests::create_test_user(&mut conn);
 
-        let artifact = Artifact::create_artifact(
-            &mut conn,
-            file_display_name,
-            file_path,
-            upload_date,
-            user.user_id,
-        )
-        .unwrap();
+        let artifact =
+            Artifact::create_artifact(&mut conn, file_display_name, file_path, user.user_id)
+                .unwrap();
 
         assert_eq!(artifact.file_display_name, file_display_name);
         assert_eq!(artifact.file_path, file_path);
-        assert_eq!(artifact.upload_date, upload_date);
+        assert_eq!(artifact.upload_date, Utc::now().date_naive());
         assert_eq!(artifact.uploaded_by, user.user_id);
 
         assert_eq!(

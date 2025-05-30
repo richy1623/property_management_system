@@ -22,10 +22,12 @@ uuid = { version = "1.16.0", features = ["v4"] }
 tonic = "0.13.1"
 prost = "0.13"
 prost-types = "0.13"
-tokio = { version = "1.45.0", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.45.0", features = ["fs", "macros", "rt-multi-thread"] }
 jsonwebtoken = "9.3.1"
 strum = { version = "0.27", features = ["derive"] }
 num_enum = "0.7.3"
+aes-gcm = "0.10.3"
+tempfile = "3.20.0"
 
 [build-dependencies]
 tonic-build = "0.13.1"

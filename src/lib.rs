@@ -1,5 +1,6 @@
 pub mod jwt;
 pub mod model;
+pub mod secure_storage;
 pub mod service;
 
 mod schema;

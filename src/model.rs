@@ -35,6 +35,24 @@ impl From<jsonwebtoken::errors::Error> for Error {
     }
 }
 
+impl From<aes_gcm::Error> for Error {
+    fn from(err: aes_gcm::Error) -> Self {
+        Error::InternalError(err.to_string())
+    }
+}
+
+impl From<std::io::Error> for Error {
+    fn from(err: std::io::Error) -> Self {
+        Error::InternalError(err.to_string())
+    }
+}
+
+impl From<Box<dyn std::error::Error>> for Error {
+    fn from(err: Box<dyn std::error::Error>) -> Self {
+        Error::InternalError(err.to_string())
+    }
+}
+
 impl From<Error> for Status {
     fn from(err: Error) -> Self {
         match err {
@@ -162,14 +180,8 @@ pub mod tests {
     }
 
     pub fn create_test_artifact(conn: &mut PgConnection, user: &User, file_path: &str) -> Artifact {
-        Artifact::create_artifact(
-            conn,
-            &Uuid::new_v4().to_string(),
-            file_path,
-            NaiveDate::from_ymd_opt(2025, 09, 05).unwrap(),
-            user.user_id,
-        )
-        .unwrap()
+        Artifact::create_artifact(conn, &Uuid::new_v4().to_string(), file_path, user.user_id)
+            .unwrap()
     }
 
     pub fn grant_user_all_permissions(conn: &mut PgConnection, user: &User) -> Vec<PermissionType> {
