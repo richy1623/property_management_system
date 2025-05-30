@@ -180,8 +180,14 @@ pub mod tests {
     }
 
     pub fn create_test_artifact(conn: &mut PgConnection, user: &User, file_path: &str) -> Artifact {
-        Artifact::create_artifact(conn, &Uuid::new_v4().to_string(), file_path, user.user_id)
-            .unwrap()
+        Artifact::create_artifact(
+            conn,
+            &Uuid::new_v4().to_string(),
+            file_path,
+            user.user_id,
+            true,
+        )
+        .unwrap()
     }
 
     pub fn grant_user_all_permissions(conn: &mut PgConnection, user: &User) -> Vec<PermissionType> {

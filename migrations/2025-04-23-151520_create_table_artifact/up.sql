@@ -5,5 +5,6 @@ CREATE TABLE
         file_display_name TEXT NOT NULL,
         file_path TEXT NOT NULL,
         upload_date DATE NOT NULL,
-        uploaded_by INTEGER NOT NULL REFERENCES "user" (user_id) ON DELETE CASCADE
+        uploaded_by INTEGER NOT NULL REFERENCES "user" (user_id) ON DELETE CASCADE,
+        is_temporary BOOLEAN NOT NULL
     );

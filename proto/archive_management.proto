@@ -1,0 +1,47 @@
+syntax = "proto3";
+package property_management_system.artifact_management;
+
+service ArtifactManagement {
+    rpc StoreArtifact (StoreArtifactRequest) returns (ArtifactRef);
+
+    rpc GetArtifact (GetArtifactRequest) returns (Artifact);
+}
+
+
+message StoreArtifactRequest {
+    string jwt_token = 1;
+    string file_display_name = 2;
+    bytes file_content = 3;
+}
+
+message ArtifactRef {
+    int32 artifact_id = 1;
+    string file_display_name = 2;
+    Date upload_date = 3;
+    int32 uploaded_by = 4;
+}
+
+message GetArtifactRequest {
+    string jwt_token = 1;
+    int32 artifact_id = 2;
+}
+
+message Artifact {
+    int32 artifact_id = 1;
+    string file_display_name = 2;
+    bytes file_content = 3;
+    Date upload_date = 4;
+    int32 uploaded_by = 5;
+}
+
+// A message to represent a calendar date (no time component).
+message Date {
+    // Year of the date, e.g., 2025
+    int32 year = 1;
+
+    // Month of the date, from 1 (January) to 12 (December)
+    int32 month = 2;
+
+    // Day of the month, from 1 to 31 depending on the month and year
+    int32 day = 3;
+}

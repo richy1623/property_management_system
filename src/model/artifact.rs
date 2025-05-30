@@ -16,6 +16,7 @@ pub struct Artifact {
     pub file_path: String,
     pub upload_date: chrono::NaiveDate,
     pub uploaded_by: i32,
+    pub is_temporary: bool,
 }
 
 impl Artifact {
@@ -24,6 +25,7 @@ impl Artifact {
         file_display_name: &str,
         file_path: &str,
         uploaded_by: i32,
+        is_temporary: bool,
     ) -> Result<Artifact, Error> {
         diesel::insert_into(artifact::table)
             .values((
@@ -31,6 +33,7 @@ impl Artifact {
                 artifact::file_path.eq(file_path),
                 artifact::upload_date.eq(Utc::now().date_naive()),
                 artifact::uploaded_by.eq(uploaded_by),
+                artifact::is_temporary.eq(is_temporary),
             ))
             .get_result(conn)
             .map_err(Into::into)
@@ -70,13 +73,14 @@ mod tests {
         let user = crate::model::tests::create_test_user(&mut conn);
 
         let artifact =
-            Artifact::create_artifact(&mut conn, file_display_name, file_path, user.user_id)
+            Artifact::create_artifact(&mut conn, file_display_name, file_path, user.user_id, true)
                 .unwrap();
 
         assert_eq!(artifact.file_display_name, file_display_name);
         assert_eq!(artifact.file_path, file_path);
         assert_eq!(artifact.upload_date, Utc::now().date_naive());
         assert_eq!(artifact.uploaded_by, user.user_id);
+        assert_eq!(artifact.is_temporary, true);
 
         assert_eq!(
             artifact,

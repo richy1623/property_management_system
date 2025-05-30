@@ -21,6 +21,7 @@ diesel::table! {
         file_path -> Text,
         upload_date -> Date,
         uploaded_by -> Int4,
+        is_temporary -> Bool,
     }
 }
 

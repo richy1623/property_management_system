@@ -23,6 +23,7 @@ static JWT_VALIDATION: Lazy<Validation> = Lazy::new(|| {
 /// authentication and authorization.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct Claims {
+    //TODO make this rather be a user_id
     /// Subject of the token (username).
     pub sub: String,
 
