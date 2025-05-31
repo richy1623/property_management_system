@@ -221,9 +221,7 @@ mod tests {
         jwt::{ClaimsBuilder, Jwt},
         service::payment_management::payment_management_proto::Date,
     };
-    use rstest::rstest;
 
-    #[rstest]
     #[tokio::test]
     async fn test_create_payment_success() {
         let pool = crate::tests::get_test_db_connection_pool(
@@ -278,7 +276,6 @@ mod tests {
         assert_eq!(payment, payment_inserted);
     }
 
-    #[rstest]
     #[tokio::test]
     async fn test_create_payment_permission_denied() {
         let pool = crate::tests::get_test_db_connection_pool(

@@ -104,3 +104,222 @@ impl ArtifactManagement for ArtifactManagementService {
         )))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::jwt::ClaimsBuilder;
+    use crate::model::artifact::Artifact as ArtifactModel;
+    use crate::model::user_permission::PermissionType;
+    use tempfile::TempDir;
+
+    #[tokio::test]
+    async fn test_store_artifact_success() {
+        let pool =
+            crate::tests::get_test_db_connection_pool("artifact_management_store_artifact_success");
+        let mut conn = pool.get().unwrap();
+
+        let jwt = Jwt::new("a-secret-at-least-256-bits-long");
+        let temp_dir = TempDir::new().unwrap();
+
+        let secure_storage = SecureStorage::new(temp_dir.path(), &[0u8; 32]);
+
+        let service = ArtifactManagementService {
+            database_connection_pool: pool,
+            jwt: jwt.clone(),
+            secure_storage,
+        };
+
+        let user = crate::model::tests::create_test_user(&mut conn);
+
+        let token = jwt.encode_jwt_token(
+            ClaimsBuilder::new(&user.user_name)
+                .permission(PermissionType::ModifyPayments.to_string())
+                .build(),
+        );
+
+        let req = StoreArtifactRequest {
+            jwt_token: token,
+            file_display_name: "Test File".to_string(),
+            file_content: b"file data".to_vec(),
+        };
+
+        let response = service
+            .store_artifact(Request::new(req))
+            .await
+            .unwrap()
+            .into_inner();
+
+        let artifact = ArtifactModel::get_artifact(&mut conn, response.artifact_id).unwrap();
+        assert_eq!(artifact.file_display_name, "Test File");
+    }
+
+    #[tokio::test]
+    async fn test_store_artifact_invalid_permissions() {
+        let pool = crate::tests::get_test_db_connection_pool(
+            "artifact_management_store_artifact_invalid_permissions",
+        );
+        let mut conn = pool.get().unwrap();
+
+        let jwt = Jwt::new("a-secret-at-least-256-bits-long");
+        let temp_dir = TempDir::new().unwrap();
+
+        let secure_storage = SecureStorage::new(temp_dir.path(), &[0u8; 32]);
+
+        let service = ArtifactManagementService {
+            database_connection_pool: pool,
+            jwt: jwt.clone(),
+            secure_storage,
+        };
+
+        let user = crate::model::tests::create_test_user(&mut conn);
+
+        let token = jwt.encode_jwt_token(ClaimsBuilder::new(&user.user_name).build());
+
+        let req = StoreArtifactRequest {
+            jwt_token: token,
+            file_display_name: "No Perms".to_string(),
+            file_content: b"data".to_vec(),
+        };
+
+        let result = service.store_artifact(Request::new(req)).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code(), tonic::Code::PermissionDenied);
+    }
+
+    #[tokio::test]
+    async fn test_get_artifact_success() {
+        let pool =
+            crate::tests::get_test_db_connection_pool("artifact_management_get_artifact_success");
+        let mut conn = pool.get().unwrap();
+
+        let jwt = Jwt::new("a-secret-at-least-256-bits-long");
+        let temp_dir = TempDir::new().unwrap();
+
+        let secure_storage = SecureStorage::new(temp_dir.path(), &[0u8; 32]);
+
+        let service = ArtifactManagementService {
+            database_connection_pool: pool,
+            jwt: jwt.clone(),
+            secure_storage,
+        };
+
+        let user = crate::model::tests::create_test_user(&mut conn);
+
+        let token = jwt.encode_jwt_token(
+            ClaimsBuilder::new(&user.user_name)
+                .permission(PermissionType::ViewPayments.to_string())
+                .build(),
+        );
+
+        let path = service
+            .secure_storage
+            .store_file(
+                "sample",
+                b"artifact content",
+                chrono::Utc::now().date_naive(),
+            )
+            .await
+            .unwrap();
+
+        let artifact = ArtifactModel::create_artifact(
+            &mut conn,
+            "GetFile",
+            path.to_str().unwrap(),
+            user.user_id,
+            true,
+        )
+        .unwrap();
+
+        let req = GetArtifactRequest {
+            jwt_token: token,
+            artifact_id: artifact.artifact_id,
+        };
+
+        let response = service
+            .get_artifact(Request::new(req))
+            .await
+            .unwrap()
+            .into_inner();
+        assert_eq!(response.file_display_name, "GetFile");
+        assert_eq!(response.file_content, b"artifact content");
+    }
+
+    #[tokio::test]
+    async fn test_get_artifact_invalid_permissions() {
+        let pool = crate::tests::get_test_db_connection_pool(
+            "artifact_management_get_artifact_invalid_permissions",
+        );
+        let mut conn = pool.get().unwrap();
+
+        let jwt = Jwt::new("a-secret-at-least-256-bits-long");
+        let temp_dir = TempDir::new().unwrap();
+
+        let secure_storage = SecureStorage::new(temp_dir.path(), &[0u8; 32]);
+
+        let service = ArtifactManagementService {
+            database_connection_pool: pool,
+            jwt: jwt.clone(),
+            secure_storage,
+        };
+
+        let user = crate::model::tests::create_test_user(&mut conn);
+
+        let token = jwt.encode_jwt_token(ClaimsBuilder::new(&user.user_name).build());
+
+        let req = GetArtifactRequest {
+            jwt_token: token,
+            artifact_id: 123, // nonexistent
+        };
+
+        let result = service.get_artifact(Request::new(req)).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code(), tonic::Code::PermissionDenied);
+    }
+
+    #[tokio::test]
+    async fn test_get_artifact_no_such_file() {
+        let pool = crate::tests::get_test_db_connection_pool(
+            "artifact_management_get_artifact_no_such_file",
+        );
+        let mut conn = pool.get().unwrap();
+
+        let jwt = Jwt::new("a-secret-at-least-256-bits-long");
+        let temp_dir = TempDir::new().unwrap();
+
+        let secure_storage = SecureStorage::new(temp_dir.path(), &[0u8; 32]);
+
+        let service = ArtifactManagementService {
+            database_connection_pool: pool,
+            jwt: jwt.clone(),
+            secure_storage,
+        };
+
+        let user = crate::model::tests::create_test_user(&mut conn);
+
+        let token = jwt.encode_jwt_token(
+            ClaimsBuilder::new(&user.user_name)
+                .permission(PermissionType::ViewPayments.to_string())
+                .build(),
+        );
+
+        let fake_path = temp_dir.path().join("nonexistent_file.enc");
+        let artifact = ArtifactModel::create_artifact(
+            &mut conn,
+            "MissingFile",
+            fake_path.to_str().unwrap(),
+            user.user_id,
+            true,
+        )
+        .unwrap();
+
+        let req = GetArtifactRequest {
+            jwt_token: token,
+            artifact_id: artifact.artifact_id,
+        };
+
+        let result = service.get_artifact(Request::new(req)).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code(), tonic::Code::Internal);
+    }
+}

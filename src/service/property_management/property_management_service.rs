@@ -654,7 +654,7 @@ mod tests {
         // Perform update
         let ownership_update_request = OwnershipUpdateRequest {
             jwt_token: service.jwt.encode_jwt_token(
-                ClaimsBuilder::new("admin")
+                ClaimsBuilder::new(&user.user_name)
                     .permission(PermissionType::ModifyOwnerships.to_string())
                     .build(),
             ),

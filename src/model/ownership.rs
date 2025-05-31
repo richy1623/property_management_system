@@ -238,11 +238,11 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(ownership.user_id, user.user_id);
-        assert_eq!(ownership.plot_id, plot.plot_id);
-        assert_eq!(ownership.state, OwnershipState::Paid);
-        assert_eq!(ownership.total_sale_value, 10);
-        assert_eq!(ownership.monthly_repayment_amount, 1);
+        assert_eq!(update_ownership.user_id, user.user_id);
+        assert_eq!(update_ownership.plot_id, plot.plot_id);
+        assert_eq!(update_ownership.state, OwnershipState::Paid);
+        assert_eq!(update_ownership.total_sale_value, 10);
+        assert_eq!(update_ownership.monthly_repayment_amount, 1);
 
         let ownership_in_db = Ownership::get_ownership(&mut conn, ownership.ownership_id).unwrap();
 
