@@ -47,12 +47,6 @@ impl From<std::io::Error> for Error {
     }
 }
 
-impl From<Box<dyn std::error::Error>> for Error {
-    fn from(err: Box<dyn std::error::Error>) -> Self {
-        Error::InternalError(err.to_string())
-    }
-}
-
 impl From<Error> for Status {
     fn from(err: Error) -> Self {
         match err {

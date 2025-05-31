@@ -216,17 +216,23 @@ impl PaymentManagement for PaymentManagementService {
 
 #[cfg(test)]
 mod tests {
+    use rstest::{fixture, rstest};
+
     use super::*;
     use crate::{
         jwt::{ClaimsBuilder, Jwt},
         service::payment_management::payment_management_proto::Date,
     };
 
+    #[fixture]
+    #[once]
+    pub fn pool() -> Pool<ConnectionManager<PgConnection>> {
+        crate::tests::get_test_db_connection_pool("payment_management_service")
+    }
+
+    #[rstest]
     #[tokio::test]
-    async fn test_create_payment_success() {
-        let pool = crate::tests::get_test_db_connection_pool(
-            "payment_management_service_test_create_payment_success",
-        );
+    async fn test_create_payment_success(pool: &Pool<ConnectionManager<PgConnection>>) {
         let jwt = Jwt::new("a-string-secret-at-least-256-bits-long");
         let service = PaymentManagementService {
             database_connection_pool: pool.clone(),
@@ -276,11 +282,9 @@ mod tests {
         assert_eq!(payment, payment_inserted);
     }
 
+    #[rstest]
     #[tokio::test]
-    async fn test_create_payment_permission_denied() {
-        let pool = crate::tests::get_test_db_connection_pool(
-            "payment_management_service_test_create_payment_permission_denied",
-        );
+    async fn test_create_payment_permission_denied(pool: &Pool<ConnectionManager<PgConnection>>) {
         let jwt = Jwt::new("a-string-secret-at-least-256-bits-long");
         let service = PaymentManagementService {
             database_connection_pool: pool.clone(),
@@ -317,11 +321,11 @@ mod tests {
         assert_eq!(result.unwrap_err().code(), tonic::Code::PermissionDenied);
     }
 
+    #[rstest]
     #[tokio::test]
-    async fn test_update_payment_state_with_permission() {
-        let pool = crate::tests::get_test_db_connection_pool(
-            "payment_service_test_update_payment_state_with_permission",
-        );
+    async fn test_update_payment_state_with_permission(
+        pool: &Pool<ConnectionManager<PgConnection>>,
+    ) {
         let mut conn = pool.get().unwrap();
 
         let service = PaymentManagementService {
@@ -370,11 +374,11 @@ mod tests {
         assert_eq!(updated_payment.last_changed_by_user, user.user_id);
     }
 
+    #[rstest]
     #[tokio::test]
-    async fn test_update_payment_state_without_permission() {
-        let pool = crate::tests::get_test_db_connection_pool(
-            "payment_service_test_update_payment_state_without_permission",
-        );
+    async fn test_update_payment_state_without_permission(
+        pool: &Pool<ConnectionManager<PgConnection>>,
+    ) {
         let mut conn = pool.get().unwrap();
 
         let service = PaymentManagementService {
@@ -405,9 +409,9 @@ mod tests {
         assert_eq!(response.unwrap_err().code(), tonic::Code::PermissionDenied);
     }
 
+    #[rstest]
     #[tokio::test]
-    async fn test_get_payments_for_ownership() {
-        let pool = crate::tests::get_test_db_connection_pool("test_get_payments_for_ownership");
+    async fn test_get_payments_for_ownership(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.get().unwrap();
 
         let service = PaymentManagementService {
@@ -444,9 +448,9 @@ mod tests {
         assert_eq!(response.payments, expected_payments);
     }
 
+    #[rstest]
     #[tokio::test]
-    async fn test_get_payments_in_state() {
-        let pool = crate::tests::get_test_db_connection_pool("test_get_payments_in_state");
+    async fn test_get_payments_in_state(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.get().unwrap();
 
         let service = PaymentManagementService {
@@ -458,9 +462,8 @@ mod tests {
         let estate = crate::model::tests::create_test_estate(&mut conn);
         let plot = crate::model::tests::create_test_plot(&mut conn, &estate);
         let ownership = crate::model::tests::create_test_ownership(&mut conn, &plot, &user);
-        let payment = crate::model::tests::create_test_payment(&mut conn, &ownership, &user);
-
-        let expected_payments = vec![(&payment).into()];
+        let payment_1 = crate::model::tests::create_test_payment(&mut conn, &ownership, &user);
+        let payment_2 = crate::model::tests::create_test_payment(&mut conn, &ownership, &user);
 
         let jwt_token = service.jwt.encode_jwt_token(
             ClaimsBuilder::new(&user.user_name)
@@ -472,7 +475,7 @@ mod tests {
             jwt_token,
             state: PaymentState::PendingApproval as i32,
             offset: 0,
-            limit: 10,
+            limit: 100,
         };
 
         let response = service
@@ -481,14 +484,21 @@ mod tests {
             .unwrap()
             .into_inner();
 
-        assert_eq!(response.payments, expected_payments);
+        assert!(response.payments.contains(&Payment::from(&payment_1)));
+        assert!(response.payments.contains(&Payment::from(&payment_2)));
+        assert!(
+            response
+                .payments
+                .iter()
+                .all(|payment| payment.state == PaymentState::PendingApproval as i32)
+        )
     }
 
+    #[rstest]
     #[tokio::test]
-    async fn test_get_payments_for_ownership_permission_denied() {
-        let pool = crate::tests::get_test_db_connection_pool(
-            "test_get_payments_for_ownership_permission_denied",
-        );
+    async fn test_get_payments_for_ownership_permission_denied(
+        pool: &Pool<ConnectionManager<PgConnection>>,
+    ) {
         let mut conn = pool.get().unwrap();
 
         let service = PaymentManagementService {
@@ -519,11 +529,11 @@ mod tests {
         assert_eq!(result.unwrap_err().code(), tonic::Code::PermissionDenied);
     }
 
+    #[rstest]
     #[tokio::test]
-    async fn test_get_payments_in_state_permission_denied() {
-        let pool = crate::tests::get_test_db_connection_pool(
-            "test_get_payments_in_state_permission_denied",
-        );
+    async fn test_get_payments_in_state_permission_denied(
+        pool: &Pool<ConnectionManager<PgConnection>>,
+    ) {
         let mut conn = pool.get().unwrap();
 
         let service = PaymentManagementService {

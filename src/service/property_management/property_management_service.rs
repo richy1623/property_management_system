@@ -296,14 +296,20 @@ impl PropertyManagement for PropertyManagementService {
 
 #[cfg(test)]
 mod tests {
+    use rstest::{fixture, rstest};
+
     use super::*;
     use crate::jwt::ClaimsBuilder;
 
+    #[fixture]
+    #[once]
+    pub fn pool() -> Pool<ConnectionManager<PgConnection>> {
+        crate::tests::get_test_db_connection_pool("property_management_service")
+    }
+
+    #[rstest]
     #[tokio::test]
-    async fn test_create_estate_success() {
-        let pool = crate::tests::get_test_db_connection_pool(
-            "estate_management_service_test_test_create_estate_success",
-        );
+    async fn test_create_estate_success(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.clone().get().unwrap();
         let jwt = Jwt::new("a-string-secret-at-least-256-bits-long");
 
@@ -339,18 +345,16 @@ mod tests {
             .iter()
             .map(|e| e.clone().into())
             .collect();
-        assert_eq!(estates, vec![estate]);
+        assert!(estates.contains(&estate));
     }
 
+    #[rstest]
     #[tokio::test]
-    async fn test_create_estate_permission_denied() {
-        let pool = crate::tests::get_test_db_connection_pool(
-            "estate_management_service_test_test_create_estate_permission_denied",
-        );
+    async fn test_create_estate_permission_denied(pool: &Pool<ConnectionManager<PgConnection>>) {
         let jwt = Jwt::new("a-string-secret-at-least-256-bits-long");
 
         let service = PropertyManagementService {
-            database_connection_pool: pool,
+            database_connection_pool: pool.clone(),
             jwt,
         };
 
@@ -372,16 +376,14 @@ mod tests {
         assert_eq!(result.unwrap_err().code(), tonic::Code::PermissionDenied);
     }
 
+    #[rstest]
     #[tokio::test]
-    async fn test_get_all_estates_success() {
-        let pool = crate::tests::get_test_db_connection_pool(
-            "estate_management_service_test_test_get_all_estates_success",
-        );
+    async fn test_get_all_estates_success(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.clone().get().unwrap();
         let jwt = Jwt::new("a-string-secret-at-least-256-bits-long");
 
         let service = PropertyManagementService {
-            database_connection_pool: pool,
+            database_connection_pool: pool.clone(),
             jwt,
         };
 
@@ -390,16 +392,15 @@ mod tests {
 
         let request = Request::new(Empty {});
 
-        let result = service.get_all_estates(request).await.unwrap();
+        let result = service.get_all_estates(request).await.unwrap().into_inner();
 
-        assert_eq!(result.get_ref().estates, vec![estate_1, estate_2]);
+        assert!(result.estates.contains(&estate_1));
+        assert!(result.estates.contains(&estate_2));
     }
 
+    #[rstest]
     #[tokio::test]
-    async fn test_create_plot_success() {
-        let pool = crate::tests::get_test_db_connection_pool(
-            "estate_management_service_test_create_plot_success",
-        );
+    async fn test_create_plot_success(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.clone().get().unwrap();
         let jwt = Jwt::new("a-string-secret-at-least-256-bits-long");
 
@@ -433,19 +434,18 @@ mod tests {
         assert_eq!(plot.length, 20);
         assert_eq!(plot.width, 30);
 
-        let plots: Vec<Plot> = PlotModel::get_plots_filtered(&mut conn, None, None, None, vec![])
-            .unwrap()
-            .iter()
-            .map(|p| p.into())
-            .collect();
-        assert_eq!(plots, vec![plot]);
+        let plot_in_db = PlotModel::get_plot_with_plot_number_and_estate_id(
+            &mut conn,
+            "P-100",
+            estate.estate_id,
+        )
+        .unwrap();
+        assert_eq!(Plot::from(&plot_in_db), plot);
     }
 
+    #[rstest]
     #[tokio::test]
-    async fn test_create_plot_permission_denied() {
-        let pool = crate::tests::get_test_db_connection_pool(
-            "estate_management_service_test_create_plot_permission_denied",
-        );
+    async fn test_create_plot_permission_denied(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.clone().get().unwrap();
         let jwt = Jwt::new("a-string-secret-at-least-256-bits-long");
 
@@ -473,11 +473,9 @@ mod tests {
         assert_eq!(result.unwrap_err().code(), tonic::Code::PermissionDenied);
     }
 
+    #[rstest]
     #[tokio::test]
-    async fn test_get_plots_filtered() {
-        let pool = crate::tests::get_test_db_connection_pool(
-            "estate_management_service_test_get_plots_filtered",
-        );
+    async fn test_get_plots_filtered(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.clone().get().unwrap();
         let jwt = Jwt::new("a-string-secret-at-least-256-bits-long");
 
@@ -523,11 +521,11 @@ mod tests {
         );
     }
 
+    #[rstest]
     #[tokio::test]
-    async fn test_get_plots_filtered_permission_denied() {
-        let pool = crate::tests::get_test_db_connection_pool(
-            "estate_management_service_test_get_plots_filtered_permission_denied",
-        );
+    async fn test_get_plots_filtered_permission_denied(
+        pool: &Pool<ConnectionManager<PgConnection>>,
+    ) {
         let mut conn = pool.clone().get().unwrap();
         let jwt = Jwt::new("a-string-secret-at-least-256-bits-long");
 
@@ -557,11 +555,9 @@ mod tests {
         assert_eq!(result.unwrap_err().code(), tonic::Code::Unauthenticated);
     }
 
+    #[rstest]
     #[tokio::test]
-    async fn test_create_ownership_with_permission() {
-        let pool = crate::tests::get_test_db_connection_pool(
-            "estate_service_test_create_ownership_with_permission",
-        );
+    async fn test_create_ownership_with_permission(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.get().unwrap();
 
         let service = PropertyManagementService {
@@ -605,12 +601,11 @@ mod tests {
         assert_eq!(response.monthly_repayment_amount, 2_000);
     }
 
+    #[rstest]
     #[tokio::test]
-    async fn test_create_ownership_without_permission() {
-        let pool = crate::tests::get_test_db_connection_pool(
-            "estate_service_test_create_ownership_without_permission",
-        );
-
+    async fn test_create_ownership_without_permission(
+        pool: &Pool<ConnectionManager<PgConnection>>,
+    ) {
         let service = PropertyManagementService {
             database_connection_pool: pool.clone(),
             jwt: Jwt::new("a-string-secret-at-least-256-bits-long"),
@@ -633,11 +628,9 @@ mod tests {
         assert_eq!(response.unwrap_err().code(), tonic::Code::PermissionDenied);
     }
 
+    #[rstest]
     #[tokio::test]
-    async fn test_update_ownership() {
-        let pool =
-            crate::tests::get_test_db_connection_pool("estate_service_test_update_ownership");
-
+    async fn test_update_ownership(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.get().unwrap();
 
         // Create test ownership

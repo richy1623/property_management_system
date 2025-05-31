@@ -44,7 +44,6 @@ impl UserManagement for UserManagementService {
         &self,
         request: Request<UserCreationRequest>,
     ) -> Result<Response<User>, Status> {
-        println!("{:?}", request);
         let mut conn = match self.database_connection_pool.clone().get() {
             Ok(conn) => conn,
             Err(e) => return Err(Status::internal(e.to_string())),
@@ -68,7 +67,6 @@ impl UserManagement for UserManagementService {
         &self,
         request: Request<UserLoginRequest>,
     ) -> Result<Response<UserLoginResponse>, Status> {
-        println!("{:?}", request);
         let mut conn = match self.database_connection_pool.clone().get() {
             Ok(conn) => conn,
             Err(e) => return Err(Status::internal(e.to_string())),
@@ -130,16 +128,18 @@ impl UserManagement for UserManagementService {
 mod tests {
     use super::*;
     use crate::{jwt::Jwt, model::user_permission::PermissionType};
-    use rstest::rstest;
+    use rstest::{fixture, rstest};
     use tonic::Request;
+
+    #[fixture]
+    #[once]
+    pub fn pool() -> Pool<ConnectionManager<PgConnection>> {
+        crate::tests::get_test_db_connection_pool("user_management_service")
+    }
 
     #[rstest]
     #[tokio::test]
-    async fn test_create_user_success() {
-        let pool = crate::tests::get_test_db_connection_pool(
-            "user_management_service_test_create_user_success",
-        );
-
+    async fn test_create_user_success(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.get().unwrap();
         let service = UserManagementService {
             database_connection_pool: pool.clone(),
@@ -169,10 +169,7 @@ mod tests {
 
     #[rstest]
     #[tokio::test]
-    async fn test_login_user_success() {
-        let pool = crate::tests::get_test_db_connection_pool(
-            "user_management_service_test_login_user_success",
-        );
+    async fn test_login_user_success(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.get().unwrap();
 
         // Create user directly in DB to login later
@@ -206,10 +203,7 @@ mod tests {
 
     #[rstest]
     #[tokio::test]
-    async fn test_login_user_invalid_password() {
-        let pool = crate::tests::get_test_db_connection_pool(
-            "user_management_service_test_login_user_invalid_password",
-        );
+    async fn test_login_user_invalid_password(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.get().unwrap();
 
         let user = UserModel::create_user(
@@ -238,11 +232,9 @@ mod tests {
         assert_eq!(result.unwrap_err().code(), tonic::Code::Unauthenticated);
     }
 
+    #[rstest]
     #[tokio::test]
-    async fn test_list_users_with_permission() {
-        let pool = crate::tests::get_test_db_connection_pool(
-            "user_management_service_test_list_users_with_permission",
-        );
+    async fn test_list_users_with_permission(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.get().unwrap();
 
         let service = UserManagementService {
@@ -295,12 +287,10 @@ mod tests {
 
         assert_eq!(response.users, vec![user_1, user_2]);
     }
-    #[tokio::test]
-    async fn test_list_users_without_permission() {
-        let pool = crate::tests::get_test_db_connection_pool(
-            "user_management_service_test_list_users_without_permission",
-        );
 
+    #[rstest]
+    #[tokio::test]
+    async fn test_list_users_without_permission(pool: &Pool<ConnectionManager<PgConnection>>) {
         let service = UserManagementService {
             database_connection_pool: pool.clone(),
             jwt: Jwt::new("a-string-secret-at-least-256-bits-long"),

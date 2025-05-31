@@ -111,12 +111,18 @@ mod tests {
     use crate::jwt::ClaimsBuilder;
     use crate::model::artifact::Artifact as ArtifactModel;
     use crate::model::user_permission::PermissionType;
+    use rstest::{fixture, rstest};
     use tempfile::TempDir;
 
+    #[fixture]
+    #[once]
+    pub fn pool() -> Pool<ConnectionManager<PgConnection>> {
+        crate::tests::get_test_db_connection_pool("artifact_management_service")
+    }
+
+    #[rstest]
     #[tokio::test]
-    async fn test_store_artifact_success() {
-        let pool =
-            crate::tests::get_test_db_connection_pool("artifact_management_store_artifact_success");
+    async fn test_store_artifact_success(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.get().unwrap();
 
         let jwt = Jwt::new("a-secret-at-least-256-bits-long");
@@ -125,7 +131,7 @@ mod tests {
         let secure_storage = SecureStorage::new(temp_dir.path(), &[0u8; 32]);
 
         let service = ArtifactManagementService {
-            database_connection_pool: pool,
+            database_connection_pool: pool.clone(),
             jwt: jwt.clone(),
             secure_storage,
         };
@@ -154,11 +160,9 @@ mod tests {
         assert_eq!(artifact.file_display_name, "Test File");
     }
 
+    #[rstest]
     #[tokio::test]
-    async fn test_store_artifact_invalid_permissions() {
-        let pool = crate::tests::get_test_db_connection_pool(
-            "artifact_management_store_artifact_invalid_permissions",
-        );
+    async fn test_store_artifact_invalid_permissions(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.get().unwrap();
 
         let jwt = Jwt::new("a-secret-at-least-256-bits-long");
@@ -167,7 +171,7 @@ mod tests {
         let secure_storage = SecureStorage::new(temp_dir.path(), &[0u8; 32]);
 
         let service = ArtifactManagementService {
-            database_connection_pool: pool,
+            database_connection_pool: pool.clone(),
             jwt: jwt.clone(),
             secure_storage,
         };
@@ -187,10 +191,9 @@ mod tests {
         assert_eq!(result.unwrap_err().code(), tonic::Code::PermissionDenied);
     }
 
+    #[rstest]
     #[tokio::test]
-    async fn test_get_artifact_success() {
-        let pool =
-            crate::tests::get_test_db_connection_pool("artifact_management_get_artifact_success");
+    async fn test_get_artifact_success(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.get().unwrap();
 
         let jwt = Jwt::new("a-secret-at-least-256-bits-long");
@@ -199,7 +202,7 @@ mod tests {
         let secure_storage = SecureStorage::new(temp_dir.path(), &[0u8; 32]);
 
         let service = ArtifactManagementService {
-            database_connection_pool: pool,
+            database_connection_pool: pool.clone(),
             jwt: jwt.clone(),
             secure_storage,
         };
@@ -245,11 +248,9 @@ mod tests {
         assert_eq!(response.file_content, b"artifact content");
     }
 
+    #[rstest]
     #[tokio::test]
-    async fn test_get_artifact_invalid_permissions() {
-        let pool = crate::tests::get_test_db_connection_pool(
-            "artifact_management_get_artifact_invalid_permissions",
-        );
+    async fn test_get_artifact_invalid_permissions(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.get().unwrap();
 
         let jwt = Jwt::new("a-secret-at-least-256-bits-long");
@@ -258,7 +259,7 @@ mod tests {
         let secure_storage = SecureStorage::new(temp_dir.path(), &[0u8; 32]);
 
         let service = ArtifactManagementService {
-            database_connection_pool: pool,
+            database_connection_pool: pool.clone(),
             jwt: jwt.clone(),
             secure_storage,
         };
@@ -277,11 +278,9 @@ mod tests {
         assert_eq!(result.unwrap_err().code(), tonic::Code::PermissionDenied);
     }
 
+    #[rstest]
     #[tokio::test]
-    async fn test_get_artifact_no_such_file() {
-        let pool = crate::tests::get_test_db_connection_pool(
-            "artifact_management_get_artifact_no_such_file",
-        );
+    async fn test_get_artifact_no_such_file(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.get().unwrap();
 
         let jwt = Jwt::new("a-secret-at-least-256-bits-long");
@@ -290,7 +289,7 @@ mod tests {
         let secure_storage = SecureStorage::new(temp_dir.path(), &[0u8; 32]);
 
         let service = ArtifactManagementService {
-            database_connection_pool: pool,
+            database_connection_pool: pool.clone(),
             jwt: jwt.clone(),
             secure_storage,
         };
