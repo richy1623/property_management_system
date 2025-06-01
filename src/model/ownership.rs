@@ -92,17 +92,20 @@ impl Ownership {
     pub fn update_ownership(
         conn: &mut PgConnection,
         target_ownership_id: i32,
-        new_state: OwnershipState,
-        new_total_sale_value: i32,
-        new_monthly_repayment_amount: i32,
-        _updated_by_user_id: i32, // reserved for auditing/logging
+        new_state: Option<OwnershipState>,
+        new_total_sale_value: Option<i32>,
+        new_monthly_repayment_amount: Option<i32>,
+        _updated_by_user_id: i32,
     ) -> Result<Ownership, Error> {
         // TODO audit log
+        let existing_ownership = Ownership::get_ownership(conn, target_ownership_id)?;
         diesel::update(ownership::table.filter(ownership::ownership_id.eq(target_ownership_id)))
             .set((
-                ownership::state.eq(new_state),
-                ownership::total_sale_value.eq(new_total_sale_value),
-                ownership::monthly_repayment_amount.eq(new_monthly_repayment_amount),
+                ownership::state.eq(new_state.unwrap_or(existing_ownership.state)),
+                ownership::total_sale_value
+                    .eq(new_total_sale_value.unwrap_or(existing_ownership.total_sale_value)),
+                ownership::monthly_repayment_amount.eq(new_monthly_repayment_amount
+                    .unwrap_or(existing_ownership.monthly_repayment_amount)),
             ))
             .get_result(conn)
             .map_err(Into::into)
@@ -231,9 +234,9 @@ mod tests {
         let update_ownership = Ownership::update_ownership(
             &mut conn,
             ownership.ownership_id,
-            OwnershipState::Paid,
-            10,
-            1,
+            Some(OwnershipState::Paid),
+            Some(10),
+            Some(1),
             user.user_id,
         )
         .unwrap();

@@ -274,8 +274,12 @@ impl PropertyManagement for PropertyManagementService {
             UserModel::get_user_by_user_name(&mut conn, &jwt_token.claims.sub)?;
 
         // Parse ownership state from i32 to enum
-        let new_ownership_state =
-            OwnershipState::try_from(state).map_err(|e| Status::invalid_argument(e.to_string()))?;
+        let new_ownership_state: Option<OwnershipState> = match state {
+            Some(s) => Some(
+                OwnershipState::try_from(s).map_err(|e| Status::invalid_argument(e.to_string()))?,
+            ),
+            None => None,
+        };
 
         // Update ownership
         let updated_ownership = OwnershipModel::update_ownership(
@@ -652,9 +656,9 @@ mod tests {
                     .build(),
             ),
             ownership_id: ownership.ownership_id,
-            state: OwnershipState::Paid.into(),
-            total_sale_value: 10,
-            monthly_repayment_amount: 1,
+            state: Some(OwnershipState::Paid.into()),
+            total_sale_value: Some(10),
+            monthly_repayment_amount: Some(1),
         };
 
         let response = service

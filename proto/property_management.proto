@@ -95,9 +95,9 @@ message Ownership {
 message OwnershipUpdateRequest {
     string jwt_token = 1;
     int32 ownership_id = 2;
-    OwnershipState state = 3;
-    int32 total_sale_value = 4;
-    int32 monthly_repayment_amount = 5;
+    optional OwnershipState state = 3;
+    optional int32 total_sale_value = 4;
+    optional int32 monthly_repayment_amount = 5;
 }
 
 // TODO 
