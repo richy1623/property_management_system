@@ -22,7 +22,7 @@ pub struct UserManagementService {
 }
 
 impl UserManagementService {
-    pub fn new(database_connection_url: &str) -> Self {
+    pub fn new(database_connection_url: &str, jwt_secret_key: &str) -> Self {
         let database_connection_pool = crate::get_connection_pool(database_connection_url);
         database_connection_pool
             .clone()
@@ -33,7 +33,7 @@ impl UserManagementService {
 
         UserManagementService {
             database_connection_pool: database_connection_pool,
-            jwt: Jwt::new("a-string-secret-at-least-256-bits-long"),
+            jwt: Jwt::new(jwt_secret_key),
         }
     }
 }

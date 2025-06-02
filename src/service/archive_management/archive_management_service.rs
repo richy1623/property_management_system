@@ -2,6 +2,7 @@ use super::archive_management_proto::{
     Artifact, ArtifactRef, GetArtifactRequest, StoreArtifactRequest,
     artifact_management_server::ArtifactManagement,
 };
+use crate::MIGRATIONS;
 use crate::jwt::Jwt;
 use crate::model::user_permission::PermissionType;
 use crate::model::{artifact::Artifact as ArtifactModel, user::User as UserModel};
@@ -11,6 +12,7 @@ use diesel::{
     PgConnection,
     r2d2::{ConnectionManager, Pool},
 };
+use diesel_migrations::MigrationHarness;
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
@@ -18,6 +20,28 @@ pub struct ArtifactManagementService {
     database_connection_pool: Pool<ConnectionManager<PgConnection>>,
     jwt: Jwt,
     secure_storage: SecureStorage,
+}
+
+impl ArtifactManagementService {
+    pub fn new(
+        database_connection_url: &str,
+        jwt_secret_key: &str,
+        secure_storage: SecureStorage,
+    ) -> Self {
+        let database_connection_pool = crate::get_connection_pool(database_connection_url);
+        database_connection_pool
+            .clone()
+            .get()
+            .expect("Failed getting db pool")
+            .run_pending_migrations(MIGRATIONS)
+            .expect("Failed running migrations");
+
+        ArtifactManagementService {
+            database_connection_pool: database_connection_pool,
+            jwt: Jwt::new(jwt_secret_key),
+            secure_storage,
+        }
+    }
 }
 
 #[tonic::async_trait]
@@ -128,7 +152,7 @@ mod tests {
         let jwt = Jwt::new("a-secret-at-least-256-bits-long");
         let temp_dir = TempDir::new().unwrap();
 
-        let secure_storage = SecureStorage::new(temp_dir.path(), &[0u8; 32]);
+        let secure_storage = SecureStorage::new(temp_dir.path(), &[0u8; 32]).unwrap();
 
         let service = ArtifactManagementService {
             database_connection_pool: pool.clone(),
@@ -168,7 +192,7 @@ mod tests {
         let jwt = Jwt::new("a-secret-at-least-256-bits-long");
         let temp_dir = TempDir::new().unwrap();
 
-        let secure_storage = SecureStorage::new(temp_dir.path(), &[0u8; 32]);
+        let secure_storage = SecureStorage::new(temp_dir.path(), &[0u8; 32]).unwrap();
 
         let service = ArtifactManagementService {
             database_connection_pool: pool.clone(),
@@ -199,7 +223,7 @@ mod tests {
         let jwt = Jwt::new("a-secret-at-least-256-bits-long");
         let temp_dir = TempDir::new().unwrap();
 
-        let secure_storage = SecureStorage::new(temp_dir.path(), &[0u8; 32]);
+        let secure_storage = SecureStorage::new(temp_dir.path(), &[0u8; 32]).unwrap();
 
         let service = ArtifactManagementService {
             database_connection_pool: pool.clone(),
@@ -256,7 +280,7 @@ mod tests {
         let jwt = Jwt::new("a-secret-at-least-256-bits-long");
         let temp_dir = TempDir::new().unwrap();
 
-        let secure_storage = SecureStorage::new(temp_dir.path(), &[0u8; 32]);
+        let secure_storage = SecureStorage::new(temp_dir.path(), &[0u8; 32]).unwrap();
 
         let service = ArtifactManagementService {
             database_connection_pool: pool.clone(),
@@ -286,7 +310,7 @@ mod tests {
         let jwt = Jwt::new("a-secret-at-least-256-bits-long");
         let temp_dir = TempDir::new().unwrap();
 
-        let secure_storage = SecureStorage::new(temp_dir.path(), &[0u8; 32]);
+        let secure_storage = SecureStorage::new(temp_dir.path(), &[0u8; 32]).unwrap();
 
         let service = ArtifactManagementService {
             database_connection_pool: pool.clone(),

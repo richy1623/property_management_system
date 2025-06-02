@@ -13,12 +13,14 @@ pub struct SecureStorage {
 }
 
 impl SecureStorage {
-    pub fn new(root_path: impl AsRef<Path>, key_bytes: &[u8; 32]) -> Self {
+    pub fn new(root_path: impl AsRef<Path>, key_bytes: &[u8; 32]) -> Result<Self, Error> {
         let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(key_bytes));
-        Self {
+        let file_storage_path_buf = root_path.as_ref().to_path_buf();
+        std::fs::create_dir_all(&file_storage_path_buf)?;
+        Ok(Self {
             cipher,
-            root_path: root_path.as_ref().to_path_buf(),
-        }
+            root_path: file_storage_path_buf,
+        })
     }
 
     pub async fn store_file(
@@ -83,7 +85,7 @@ mod tests {
         let temp_dir = tempdir().unwrap();
         let key = [42u8; 32];
 
-        let storage = SecureStorage::new(temp_dir.path(), &key);
+        let storage = SecureStorage::new(temp_dir.path(), &key).unwrap();
 
         let content = b"confidential data";
         let file_name = "secret.txt";
@@ -108,7 +110,7 @@ mod tests {
     async fn test_read_file_fails_on_short_file() {
         let temp_dir = tempdir().unwrap();
         let key = [42u8; 32];
-        let storage = SecureStorage::new(temp_dir.path(), &key);
+        let storage = SecureStorage::new(temp_dir.path(), &key).unwrap();
 
         let file_path = temp_dir.path().join("corrupt.enc");
         tokio::fs::write(&file_path, b"too short").await.unwrap();
@@ -121,7 +123,7 @@ mod tests {
     async fn test_read_file_fails_on_invalid_encryption() {
         let temp_dir = tempdir().unwrap();
         let key = [42u8; 32];
-        let storage = SecureStorage::new(temp_dir.path(), &key);
+        let storage = SecureStorage::new(temp_dir.path(), &key).unwrap();
 
         let file_path = temp_dir.path().join("invalid.enc");
 
@@ -138,7 +140,7 @@ mod tests {
     async fn test_store_file_creates_correct_directory_structure() {
         let temp_dir = tempdir().unwrap();
         let key = [42u8; 32];
-        let storage = SecureStorage::new(temp_dir.path(), &key);
+        let storage = SecureStorage::new(temp_dir.path(), &key).unwrap();
 
         let date = NaiveDate::from_ymd_opt(2025, 1, 9).unwrap();
         let _ = storage
