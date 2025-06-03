@@ -1,17 +1,18 @@
-use actix_web::{App, HttpServer, web};
+use std::net::Ipv4Addr;
+
+use actix_web::{App, HttpServer, middleware::Logger};
+use env_logger::Env;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+
     HttpServer::new(|| {
         App::new()
-            .service(property_management_system::api::management_server::hello)
-            .service(property_management_system::api::management_server::echo)
-            .route(
-                "/hey",
-                web::get().to(property_management_system::api::management_server::manual_hello),
-            )
+            .wrap(Logger::default())
+            .service(property_management_system::api::gateway::management::api_routes())
     })
-    .bind(("127.0.0.1", 8080))?
+    .bind((Ipv4Addr::UNSPECIFIED, 8080))?
     .run()
     .await
 }

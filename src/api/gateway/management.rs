@@ -1,0 +1,117 @@
+use actix_web::{HttpResponse, Scope, web};
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
+
+use crate::api::handler::estate_handler::{create_estate, list_estates};
+use crate::api::handler::ownership_handler::create_ownership;
+use crate::api::handler::payment_handler::{
+    get_payments_for_ownership, get_payments_in_state, update_payment_state,
+};
+use crate::api::handler::plot_handler::{create_plot, list_plots};
+use crate::api::handler::user_handler::{create_user, list_users, login_user};
+
+pub fn api_routes() -> Scope {
+    web::scope("/api")
+        // User routes
+        .service(
+            web::scope("/user")
+                .route("/login", web::post().to(login_user))
+                .route("/create", web::post().to(create_user))
+                .route("/list", web::post().to(list_users)),
+        )
+        // Estate routes
+        .service(
+            web::scope("/estate")
+                .route("/create", web::post().to(create_estate))
+                .route("/list", web::get().to(list_estates)),
+        )
+        // Plot routes
+        .service(
+            web::scope("/plot")
+                .route("/create", web::post().to(create_plot))
+                .route("/list", web::post().to(list_plots)),
+        )
+        // Ownership routes
+        .service(web::scope("/ownership").route("/create", web::post().to(create_ownership)))
+        // Payment routes
+        .service(
+            web::scope("/payment")
+                .route("/ownership", web::get().to(get_payments_for_ownership))
+                .route("/state", web::get().to(get_payments_in_state))
+                .route("/update", web::post().to(update_payment_state)),
+        )
+        .service(
+            web::scope("/docs")
+                .service(
+                    SwaggerUi::new("ui/{_:.*}").url("/api/docs/openapi.json", Default::default()),
+                )
+                .route(
+                    "/openapi.json",
+                    web::get().to(|| async { HttpResponse::Ok().json(doc::ApiDoc::openapi()) }),
+                ),
+        )
+    // Serve Swagger UI
+}
+
+pub mod doc {
+    use crate::api::model::{
+        estate::{Estate, EstateCreationRequest, EstateList},
+        ownership::{Ownership, OwnershipCreationRequest},
+        payment::{Payment, PaymentList, UpdatePaymentStateRequest},
+        plot::{GetPlotsRequest, Plot, PlotCreationRequest, PlotList},
+        user::{AccessTokenResponse, CreateUserRequest, ListUsersRequest, LoginRequest, User},
+    };
+    use crate::db::model::payment::PaymentState;
+
+    use crate::api::handler::{
+        estate_handler, ownership_handler, payment_handler, plot_handler, user_handler,
+    };
+
+    use utoipa::OpenApi;
+
+    #[derive(OpenApi)]
+    #[openapi(
+    info(title="Management API", description = "Management API"),
+    paths(
+        user_handler::login_user,
+        user_handler::create_user,
+        user_handler::list_users,
+        estate_handler::create_estate,
+        estate_handler::list_estates,
+        plot_handler::create_plot,
+        plot_handler::list_plots,
+        ownership_handler::create_ownership,
+        payment_handler::get_payments_for_ownership,
+        payment_handler::get_payments_in_state,
+        payment_handler::update_payment_state,
+    ),
+    components(
+        schemas(
+            LoginRequest,
+            CreateUserRequest,
+            User,
+            ListUsersRequest,
+            AccessTokenResponse,
+            EstateCreationRequest,
+            Estate,
+            EstateList,
+            PlotCreationRequest,
+            Plot,
+            PlotList,
+            GetPlotsRequest,
+            OwnershipCreationRequest,
+            Ownership,
+            Payment,
+            PaymentList,
+            UpdatePaymentStateRequest,
+            PaymentState,
+        )
+    ),
+    tags(
+        (name = "User Management", description = "Operations related to user authentication and management"),
+        (name = "Property Management", description = "Operations related to estates, plots, and ownership"),
+        (name = "Payment Management", description = "Operations related to payment tracking and updates")
+    )
+)]
+    pub struct ApiDoc;
+}

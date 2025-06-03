@@ -37,9 +37,6 @@ paths:
                   access_token:
                     type: string
                     example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXCVI9...
-                  token_type:
-                    type: string
-                    example: Bearer
         "400":
           description: Missing or invalid input
         "401":

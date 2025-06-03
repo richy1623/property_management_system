@@ -2,6 +2,8 @@ use diesel::{insert_into, prelude::*};
 use diesel_derive_enum::DbEnum;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
+use strum::Display;
+use utoipa::ToSchema;
 
 use crate::db::schema::payment::{self};
 
@@ -10,14 +12,23 @@ use crate::error::Error;
 static USER_SUBMITTED_PAYMENT_COMMENT: &str = "User submitted payment request";
 
 #[derive(
-    Debug, Clone, PartialEq, Eq, DbEnum, Serialize, Deserialize, TryFromPrimitive, IntoPrimitive,
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    DbEnum,
+    Serialize,
+    Deserialize,
+    TryFromPrimitive,
+    IntoPrimitive,
+    ToSchema,
+    Display,
 )]
 #[db_enum(
     existing_type_path = "crate::db::schema::sql_types::PaymentState",
     value_style = "SCREAMING_SNAKE_CASE"
 )]
 #[repr(i32)]
-#[derive(strum::Display)]
 #[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 pub enum PaymentState {
     PendingApproval = 0,
