@@ -1,9 +1,9 @@
+pub mod api;
+pub mod db;
+pub mod error;
 pub mod jwt;
-pub mod model;
 pub mod secure_storage;
 pub mod service;
-
-mod schema;
 
 use diesel::prelude::*;
 use diesel::r2d2::ConnectionManager;

@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use tokio::fs::{self as tokio_fs, File};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-use crate::model::Error;
+use crate::error::Error;
 
 pub struct SecureStorage {
     cipher: Aes256Gcm,

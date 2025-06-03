@@ -3,9 +3,9 @@ use diesel_derive_enum::DbEnum;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 
-use crate::schema::payment::{self};
+use crate::db::schema::payment::{self};
 
-use super::Error;
+use crate::error::Error;
 
 static USER_SUBMITTED_PAYMENT_COMMENT: &str = "User submitted payment request";
 
@@ -13,7 +13,7 @@ static USER_SUBMITTED_PAYMENT_COMMENT: &str = "User submitted payment request";
     Debug, Clone, PartialEq, Eq, DbEnum, Serialize, Deserialize, TryFromPrimitive, IntoPrimitive,
 )]
 #[db_enum(
-    existing_type_path = "crate::schema::sql_types::PaymentState",
+    existing_type_path = "crate::db::schema::sql_types::PaymentState",
     value_style = "SCREAMING_SNAKE_CASE"
 )]
 #[repr(i32)]
@@ -154,10 +154,9 @@ mod tests {
 
     use rstest::{fixture, rstest};
 
-    use crate::model::{
-        payment::{Payment, PaymentState, USER_SUBMITTED_PAYMENT_COMMENT},
-        payment_state_audit::PaymentStateAudit,
-    };
+    use crate::db::model::payment_state_audit::PaymentStateAudit;
+
+    use super::*;
 
     #[fixture]
     #[once]
@@ -169,10 +168,10 @@ mod tests {
     pub fn test_create_payment(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.clone().get().unwrap();
 
-        let estate = crate::model::tests::create_test_estate(&mut conn);
-        let plot = crate::model::tests::create_test_plot(&mut conn, &estate);
-        let user = crate::model::tests::create_test_user(&mut conn);
-        let ownership = crate::model::tests::create_test_ownership(&mut conn, &plot, &user);
+        let estate = crate::db::model::tests::create_test_estate(&mut conn);
+        let plot = crate::db::model::tests::create_test_plot(&mut conn, &estate);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
+        let ownership = crate::db::model::tests::create_test_ownership(&mut conn, &plot, &user);
 
         let date = NaiveDate::from_ymd_opt(2025, 09, 05).unwrap();
 
@@ -208,14 +207,16 @@ mod tests {
     pub fn test_update_payment_state(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.clone().get().unwrap();
 
-        let estate = crate::model::tests::create_test_estate(&mut conn);
-        let plot = crate::model::tests::create_test_plot(&mut conn, &estate);
-        let user_1 = crate::model::tests::create_test_user(&mut conn);
-        let user_2 = crate::model::tests::create_test_user(&mut conn);
-        let ownership = crate::model::tests::create_test_ownership(&mut conn, &plot, &user_1);
+        let estate = crate::db::model::tests::create_test_estate(&mut conn);
+        let plot = crate::db::model::tests::create_test_plot(&mut conn, &estate);
+        let user_1 = crate::db::model::tests::create_test_user(&mut conn);
+        let user_2 = crate::db::model::tests::create_test_user(&mut conn);
+        let ownership = crate::db::model::tests::create_test_ownership(&mut conn, &plot, &user_1);
 
-        let payment_1 = crate::model::tests::create_test_payment(&mut conn, &ownership, &user_1);
-        let payment_2 = crate::model::tests::create_test_payment(&mut conn, &ownership, &user_1);
+        let payment_1 =
+            crate::db::model::tests::create_test_payment(&mut conn, &ownership, &user_1);
+        let payment_2 =
+            crate::db::model::tests::create_test_payment(&mut conn, &ownership, &user_1);
 
         let updated_payment = Payment::update_payment_state(
             &mut conn,
@@ -271,20 +272,25 @@ mod tests {
     pub fn test_get_all_ownerships_for_user_id(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.clone().get().unwrap();
 
-        let estate = crate::model::tests::create_test_estate(&mut conn);
+        let estate = crate::db::model::tests::create_test_estate(&mut conn);
 
-        let plot_1 = crate::model::tests::create_test_plot(&mut conn, &estate);
-        let plot_2 = crate::model::tests::create_test_plot(&mut conn, &estate);
+        let plot_1 = crate::db::model::tests::create_test_plot(&mut conn, &estate);
+        let plot_2 = crate::db::model::tests::create_test_plot(&mut conn, &estate);
 
-        let user_1 = crate::model::tests::create_test_user(&mut conn);
-        let user_2 = crate::model::tests::create_test_user(&mut conn);
+        let user_1 = crate::db::model::tests::create_test_user(&mut conn);
+        let user_2 = crate::db::model::tests::create_test_user(&mut conn);
 
-        let ownership_1 = crate::model::tests::create_test_ownership(&mut conn, &plot_1, &user_1);
-        let ownership_2 = crate::model::tests::create_test_ownership(&mut conn, &plot_2, &user_2);
+        let ownership_1 =
+            crate::db::model::tests::create_test_ownership(&mut conn, &plot_1, &user_1);
+        let ownership_2 =
+            crate::db::model::tests::create_test_ownership(&mut conn, &plot_2, &user_2);
 
-        let payment_1 = crate::model::tests::create_test_payment(&mut conn, &ownership_1, &user_1);
-        let payment_2 = crate::model::tests::create_test_payment(&mut conn, &ownership_1, &user_1);
-        let payment_3 = crate::model::tests::create_test_payment(&mut conn, &ownership_2, &user_2);
+        let payment_1 =
+            crate::db::model::tests::create_test_payment(&mut conn, &ownership_1, &user_1);
+        let payment_2 =
+            crate::db::model::tests::create_test_payment(&mut conn, &ownership_1, &user_1);
+        let payment_3 =
+            crate::db::model::tests::create_test_payment(&mut conn, &ownership_2, &user_2);
 
         assert_eq!(
             Payment::get_all_payments_for_ownership_id(&mut conn, ownership_1.ownership_id)
@@ -302,15 +308,15 @@ mod tests {
     pub fn test_get_all_payments_in_state(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.clone().get().unwrap();
 
-        let estate = crate::model::tests::create_test_estate(&mut conn);
+        let estate = crate::db::model::tests::create_test_estate(&mut conn);
 
-        let plot = crate::model::tests::create_test_plot(&mut conn, &estate);
+        let plot = crate::db::model::tests::create_test_plot(&mut conn, &estate);
 
-        let user = crate::model::tests::create_test_user(&mut conn);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
 
-        let ownership = crate::model::tests::create_test_ownership(&mut conn, &plot, &user);
+        let ownership = crate::db::model::tests::create_test_ownership(&mut conn, &plot, &user);
 
-        let payment_1 = crate::model::tests::create_test_payment(&mut conn, &ownership, &user);
+        let payment_1 = crate::db::model::tests::create_test_payment(&mut conn, &ownership, &user);
         let payment_1 = Payment::update_payment_state(
             &mut conn,
             payment_1.payment_id,
@@ -319,7 +325,7 @@ mod tests {
             "comment",
         )
         .unwrap();
-        let payment_2 = crate::model::tests::create_test_payment(&mut conn, &ownership, &user);
+        let payment_2 = crate::db::model::tests::create_test_payment(&mut conn, &ownership, &user);
         let payment_2 = Payment::update_payment_state(
             &mut conn,
             payment_2.payment_id,
@@ -328,7 +334,7 @@ mod tests {
             "comment",
         )
         .unwrap();
-        let payment_3 = crate::model::tests::create_test_payment(&mut conn, &ownership, &user);
+        let payment_3 = crate::db::model::tests::create_test_payment(&mut conn, &ownership, &user);
         let payment_3 = Payment::update_payment_state(
             &mut conn,
             payment_3.payment_id,
@@ -377,10 +383,10 @@ mod tests {
     pub fn test_create_user_payment(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.clone().get().unwrap();
 
-        let estate = crate::model::tests::create_test_estate(&mut conn);
-        let plot = crate::model::tests::create_test_plot(&mut conn, &estate);
-        let user = crate::model::tests::create_test_user(&mut conn);
-        let ownership = crate::model::tests::create_test_ownership(&mut conn, &plot, &user);
+        let estate = crate::db::model::tests::create_test_estate(&mut conn);
+        let plot = crate::db::model::tests::create_test_plot(&mut conn, &estate);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
+        let ownership = crate::db::model::tests::create_test_ownership(&mut conn, &plot, &user);
 
         let date = NaiveDate::from_ymd_opt(2025, 09, 05).unwrap();
 

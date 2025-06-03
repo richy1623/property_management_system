@@ -1,9 +1,9 @@
-use crate::model::user::User;
+use crate::db::model::user::User;
 
 tonic::include_proto!("property_management_system.property_management");
 
-impl From<crate::model::estate::Estate> for Estate {
-    fn from(estate: crate::model::estate::Estate) -> Self {
+impl From<crate::db::model::estate::Estate> for Estate {
+    fn from(estate: crate::db::model::estate::Estate) -> Self {
         Estate {
             estate_id: estate.estate_id,
             name: estate.name,
@@ -14,8 +14,8 @@ impl From<crate::model::estate::Estate> for Estate {
     }
 }
 
-impl From<&crate::model::plot::Plot> for Plot {
-    fn from(plot: &crate::model::plot::Plot) -> Self {
+impl From<&crate::db::model::plot::Plot> for Plot {
+    fn from(plot: &crate::db::model::plot::Plot) -> Self {
         Plot {
             plot_id: plot.plot_id,
             estate_id: plot.estate_id,
@@ -29,7 +29,7 @@ impl From<&crate::model::plot::Plot> for Plot {
 
 impl Ownership {
     pub fn from_model_and_user(
-        ownership: &crate::model::ownership::Ownership,
+        ownership: &crate::db::model::ownership::Ownership,
         user: &User,
     ) -> Self {
         Ownership {

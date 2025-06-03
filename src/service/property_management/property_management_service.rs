@@ -10,11 +10,11 @@ use super::property_management_proto::{
     OwnershipCreationRequest, OwnershipUpdateRequest, Plot, PlotCreationRequest, PlotList,
     property_management_server::PropertyManagement,
 };
-use crate::model::ownership::Ownership as OwnershipModel;
-use crate::model::plot::Plot as PlotModel;
-use crate::model::user::User as UserModel;
-use crate::model::{estate::Estate as EstateModel, ownership::OwnershipState};
-use crate::{MIGRATIONS, jwt::Jwt, model::user_permission::PermissionType};
+use crate::db::model::ownership::Ownership as OwnershipModel;
+use crate::db::model::plot::Plot as PlotModel;
+use crate::db::model::user::User as UserModel;
+use crate::db::model::{estate::Estate as EstateModel, ownership::OwnershipState};
+use crate::{MIGRATIONS, db::model::user_permission::PermissionType, jwt::Jwt};
 
 pub struct PropertyManagementService {
     database_connection_pool: Pool<ConnectionManager<PgConnection>>,
@@ -391,8 +391,8 @@ mod tests {
             jwt,
         };
 
-        let estate_1: Estate = crate::model::tests::create_test_estate(&mut conn).into();
-        let estate_2: Estate = crate::model::tests::create_test_estate(&mut conn).into();
+        let estate_1: Estate = crate::db::model::tests::create_test_estate(&mut conn).into();
+        let estate_2: Estate = crate::db::model::tests::create_test_estate(&mut conn).into();
 
         let request = Request::new(Empty {});
 
@@ -413,7 +413,7 @@ mod tests {
             jwt,
         };
 
-        let estate = crate::model::tests::create_test_estate(&mut conn);
+        let estate = crate::db::model::tests::create_test_estate(&mut conn);
 
         let request = PlotCreationRequest {
             jwt_token: service.jwt.encode_jwt_token(
@@ -458,7 +458,7 @@ mod tests {
             jwt,
         };
 
-        let estate = crate::model::tests::create_test_estate(&mut conn);
+        let estate = crate::db::model::tests::create_test_estate(&mut conn);
 
         let request = PlotCreationRequest {
             jwt_token: service
@@ -488,7 +488,7 @@ mod tests {
             jwt,
         };
 
-        let estate = crate::model::tests::create_test_estate(&mut conn);
+        let estate = crate::db::model::tests::create_test_estate(&mut conn);
 
         let plot_1 =
             PlotModel::create_plot(&mut conn, estate.estate_id, "PN-1", "Phase X", 20, 30).unwrap();
@@ -497,9 +497,9 @@ mod tests {
         let _plot_3 =
             PlotModel::create_plot(&mut conn, estate.estate_id, "PN-3", "Phase X", 25, 35).unwrap();
 
-        let user = crate::model::tests::create_test_user(&mut conn);
-        crate::model::tests::create_test_ownership(&mut conn, &plot_1, &user);
-        crate::model::tests::create_test_ownership(&mut conn, &plot_2, &user);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
+        crate::db::model::tests::create_test_ownership(&mut conn, &plot_1, &user);
+        crate::db::model::tests::create_test_ownership(&mut conn, &plot_2, &user);
 
         let request = GetPlotsRequest {
             jwt_token: service.jwt.encode_jwt_token(
@@ -538,7 +538,7 @@ mod tests {
             jwt,
         };
 
-        let estate = crate::model::tests::create_test_estate(&mut conn);
+        let estate = crate::db::model::tests::create_test_estate(&mut conn);
 
         let _plot_1 =
             PlotModel::create_plot(&mut conn, estate.estate_id, "PN-1", "Phase X", 20, 30).unwrap();
@@ -570,8 +570,8 @@ mod tests {
         };
 
         // Setup test user and plot
-        let user = crate::model::tests::create_test_user(&mut conn);
-        let estate = crate::model::tests::create_test_estate(&mut conn);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
+        let estate = crate::db::model::tests::create_test_estate(&mut conn);
         let plot =
             PlotModel::create_plot(&mut conn, estate.estate_id, "P123", "Alpha", 50, 40).unwrap();
 
@@ -638,10 +638,10 @@ mod tests {
         let mut conn = pool.get().unwrap();
 
         // Create test ownership
-        let user = crate::model::tests::create_test_user(&mut conn);
-        let estate = crate::model::tests::create_test_estate(&mut conn);
-        let plot = crate::model::tests::create_test_plot(&mut conn, &estate);
-        let ownership = crate::model::tests::create_test_ownership(&mut conn, &plot, &user);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
+        let estate = crate::db::model::tests::create_test_estate(&mut conn);
+        let plot = crate::db::model::tests::create_test_plot(&mut conn, &estate);
+        let ownership = crate::db::model::tests::create_test_ownership(&mut conn, &plot, &user);
 
         let service = PropertyManagementService {
             database_connection_pool: pool.clone(),

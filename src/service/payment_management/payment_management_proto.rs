@@ -2,7 +2,7 @@ tonic::include_proto!("property_management_system.payment_management");
 
 use chrono::{Datelike, NaiveDate};
 
-use crate::model::payment::Payment as PaymentModel;
+use crate::db::model::payment::Payment as PaymentModel;
 
 impl From<NaiveDate> for Date {
     fn from(d: NaiveDate) -> Self {

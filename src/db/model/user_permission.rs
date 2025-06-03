@@ -2,13 +2,13 @@ use diesel::{insert_into, prelude::*};
 use diesel_derive_enum::DbEnum;
 use serde::{Deserialize, Serialize};
 
-use crate::schema::user_permission;
+use crate::db::schema::user_permission;
 
-use super::Error;
+use crate::error::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq, DbEnum, Serialize, Deserialize)]
 #[db_enum(
-    existing_type_path = "crate::schema::sql_types::PermissionType",
+    existing_type_path = "crate::db::schema::sql_types::PermissionType",
     value_style = "SCREAMING_SNAKE_CASE"
 )]
 #[derive(strum::Display)]
@@ -97,7 +97,7 @@ mod tests {
 
     use rstest::{fixture, rstest};
 
-    use crate::model::user_permission::{PermissionType, UserPermission};
+    use super::*;
 
     #[fixture]
     #[once]
@@ -109,7 +109,7 @@ mod tests {
     pub fn test_create_permissions(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.clone().get().unwrap();
 
-        let user = crate::model::tests::create_test_user(&mut conn);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
 
         let user_permission = UserPermission::set_user_permission(
             &mut conn,
@@ -139,8 +139,8 @@ mod tests {
     pub fn get_all_user_permissions(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.clone().get().unwrap();
 
-        let user = crate::model::tests::create_test_user(&mut conn);
-        let permissions = crate::model::tests::grant_user_all_permissions(&mut conn, &user);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
+        let permissions = crate::db::model::tests::grant_user_all_permissions(&mut conn, &user);
 
         assert_eq!(
             UserPermission::get_all_user_permissions(&mut conn, user.user_id).unwrap(),

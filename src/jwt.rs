@@ -4,7 +4,7 @@ use jsonwebtoken::{DecodingKey, EncodingKey, Header, TokenData, Validation};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-use crate::model::Error;
+use crate::error::Error;
 
 const DEFAULT_ISSUER: &str = "my-app";
 const DEFAULT_EXPIRY: Duration = Duration::from_secs(30 * 60); // 60 minutes
@@ -136,11 +136,7 @@ impl Jwt {
 
 #[cfg(test)]
 mod tests {
-    use super::Jwt;
-    use crate::{
-        jwt::{ClaimsBuilder, DEFAULT_ISSUER},
-        model::Error,
-    };
+    use super::*;
 
     #[test]
     pub fn test_encode() {

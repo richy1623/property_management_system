@@ -1,9 +1,9 @@
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::schema::estate;
+use crate::db::schema::estate;
 
-use super::Error;
+use crate::error::Error;
 
 #[derive(
     Queryable, Selectable, Insertable, Debug, PartialEq, Eq, Clone, Serialize, Deserialize,
@@ -59,7 +59,7 @@ mod tests {
 
     use rstest::{fixture, rstest};
 
-    use crate::model::estate::Estate;
+    use super::*;
 
     #[fixture]
     #[once]
@@ -90,9 +90,9 @@ mod tests {
     pub fn test_get_all_estates(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.clone().get().unwrap();
 
-        let estate_1 = crate::model::tests::create_test_estate(&mut conn);
-        let estate_2 = crate::model::tests::create_test_estate(&mut conn);
-        let estate_3 = crate::model::tests::create_test_estate(&mut conn);
+        let estate_1 = crate::db::model::tests::create_test_estate(&mut conn);
+        let estate_2 = crate::db::model::tests::create_test_estate(&mut conn);
+        let estate_3 = crate::db::model::tests::create_test_estate(&mut conn);
 
         let all_estates = Estate::get_all_estates(&mut conn).unwrap();
         assert!(all_estates.contains(&estate_1));

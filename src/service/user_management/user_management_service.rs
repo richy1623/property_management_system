@@ -5,7 +5,7 @@ use diesel::{
 use diesel_migrations::MigrationHarness;
 use tonic::{Request, Response, Status};
 
-use crate::model::{user::User as UserModel, user_permission::PermissionType};
+use crate::db::model::{user::User as UserModel, user_permission::PermissionType};
 use crate::{
     MIGRATIONS,
     jwt::{ClaimsBuilder, Jwt},
@@ -127,7 +127,7 @@ impl UserManagement for UserManagementService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{jwt::Jwt, model::user_permission::PermissionType};
+    use crate::{db::model::user_permission::PermissionType, jwt::Jwt};
     use rstest::{fixture, rstest};
     use tonic::Request;
 

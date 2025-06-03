@@ -2,7 +2,7 @@ tonic::include_proto!("property_management_system.artifact_management");
 
 use chrono::{Datelike, NaiveDate};
 
-use crate::model::artifact::Artifact as ArtifactModel;
+use crate::db::model::artifact::Artifact as ArtifactModel;
 
 impl From<NaiveDate> for Date {
     fn from(d: NaiveDate) -> Self {

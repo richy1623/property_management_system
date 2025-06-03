@@ -1,9 +1,11 @@
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::schema::{ownership, plot};
+use crate::db::schema::{ownership, plot};
 
-use super::{Error, ownership::OwnershipState};
+use super::ownership::OwnershipState;
+
+use crate::error::Error;
 
 #[derive(
     Queryable, Selectable, Insertable, Debug, PartialEq, Eq, Clone, Serialize, Deserialize,
@@ -105,7 +107,7 @@ mod tests {
 
     use rstest::{fixture, rstest};
 
-    use crate::model::{
+    use crate::db::model::{
         estate::Estate,
         ownership::{Ownership, OwnershipState},
         plot::Plot,
@@ -142,8 +144,8 @@ mod tests {
     ) {
         let mut conn = pool.clone().get().unwrap();
 
-        let estate_1 = crate::model::tests::create_test_estate(&mut conn);
-        let estate_2 = crate::model::tests::create_test_estate(&mut conn);
+        let estate_1 = crate::db::model::tests::create_test_estate(&mut conn);
+        let estate_2 = crate::db::model::tests::create_test_estate(&mut conn);
 
         let plot_1 =
             Plot::create_plot(&mut conn, estate_1.estate_id, "P1", "phase 1", 30, 40).unwrap();
@@ -186,8 +188,8 @@ mod tests {
         let mut conn = pool.clone().get().unwrap();
 
         // Setup estates
-        let estate_1 = crate::model::tests::create_test_estate(&mut conn);
-        let estate_2 = crate::model::tests::create_test_estate(&mut conn);
+        let estate_1 = crate::db::model::tests::create_test_estate(&mut conn);
+        let estate_2 = crate::db::model::tests::create_test_estate(&mut conn);
 
         // Setup plots
         let plot_1 =
@@ -198,7 +200,7 @@ mod tests {
             Plot::create_plot(&mut conn, estate_2.estate_id, "P300", "Gamma", 30, 40).unwrap();
 
         // Create test user
-        let user = crate::model::tests::create_test_user(&mut conn);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
 
         Ownership::create_ownership(
             &mut conn,

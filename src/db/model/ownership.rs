@@ -3,16 +3,16 @@ use diesel_derive_enum::DbEnum;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 
-use crate::schema::ownership;
+use crate::db::schema::ownership;
 
-use super::Error;
+use crate::error::Error;
 
 #[derive(
     Debug, Clone, PartialEq, Eq, DbEnum, Serialize, Deserialize, TryFromPrimitive, IntoPrimitive,
 )]
 #[repr(i32)]
 #[db_enum(
-    existing_type_path = "crate::schema::sql_types::OwnershipState",
+    existing_type_path = "crate::db::schema::sql_types::OwnershipState",
     value_style = "SCREAMING_SNAKE_CASE"
 )]
 pub enum OwnershipState {
@@ -121,7 +121,7 @@ mod tests {
 
     use rstest::{fixture, rstest};
 
-    use crate::model::ownership::{Ownership, OwnershipState};
+    use super::*;
 
     #[fixture]
     #[once]
@@ -133,9 +133,9 @@ mod tests {
     pub fn test_create_ownership(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.clone().get().unwrap();
 
-        let estate = crate::model::tests::create_test_estate(&mut conn);
-        let plot = crate::model::tests::create_test_plot(&mut conn, &estate);
-        let user = crate::model::tests::create_test_user(&mut conn);
+        let estate = crate::db::model::tests::create_test_estate(&mut conn);
+        let plot = crate::db::model::tests::create_test_plot(&mut conn, &estate);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
 
         let ownership = Ownership::create_ownership(
             &mut conn,
@@ -163,15 +163,15 @@ mod tests {
     pub fn test_get_ownership_for_user_and_plot(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.clone().get().unwrap();
 
-        let estate = crate::model::tests::create_test_estate(&mut conn);
+        let estate = crate::db::model::tests::create_test_estate(&mut conn);
 
-        let plot_1 = crate::model::tests::create_test_plot(&mut conn, &estate);
-        let plot_2 = crate::model::tests::create_test_plot(&mut conn, &estate);
+        let plot_1 = crate::db::model::tests::create_test_plot(&mut conn, &estate);
+        let plot_2 = crate::db::model::tests::create_test_plot(&mut conn, &estate);
 
-        let user = crate::model::tests::create_test_user(&mut conn);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
 
-        let ownership_1 = crate::model::tests::create_test_ownership(&mut conn, &plot_1, &user);
-        let ownership_2 = crate::model::tests::create_test_ownership(&mut conn, &plot_2, &user);
+        let ownership_1 = crate::db::model::tests::create_test_ownership(&mut conn, &plot_1, &user);
+        let ownership_2 = crate::db::model::tests::create_test_ownership(&mut conn, &plot_2, &user);
 
         assert_eq!(
             Ownership::get_ownership_for_user_and_plot(&mut conn, user.user_id, plot_1.plot_id)
@@ -195,19 +195,19 @@ mod tests {
     pub fn test_get_all_ownerships_for_user_id(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.clone().get().unwrap();
 
-        let estate = crate::model::tests::create_test_estate(&mut conn);
+        let estate = crate::db::model::tests::create_test_estate(&mut conn);
 
-        let plot_1 = crate::model::tests::create_test_plot(&mut conn, &estate);
-        let plot_2 = crate::model::tests::create_test_plot(&mut conn, &estate);
-        let plot_other = crate::model::tests::create_test_plot(&mut conn, &estate);
+        let plot_1 = crate::db::model::tests::create_test_plot(&mut conn, &estate);
+        let plot_2 = crate::db::model::tests::create_test_plot(&mut conn, &estate);
+        let plot_other = crate::db::model::tests::create_test_plot(&mut conn, &estate);
 
-        let user = crate::model::tests::create_test_user(&mut conn);
-        let user_other = crate::model::tests::create_test_user(&mut conn);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
+        let user_other = crate::db::model::tests::create_test_user(&mut conn);
 
-        let ownership_1 = crate::model::tests::create_test_ownership(&mut conn, &plot_1, &user);
-        let ownership_2 = crate::model::tests::create_test_ownership(&mut conn, &plot_2, &user);
+        let ownership_1 = crate::db::model::tests::create_test_ownership(&mut conn, &plot_1, &user);
+        let ownership_2 = crate::db::model::tests::create_test_ownership(&mut conn, &plot_2, &user);
         let ownership_other =
-            crate::model::tests::create_test_ownership(&mut conn, &plot_other, &user_other);
+            crate::db::model::tests::create_test_ownership(&mut conn, &plot_other, &user_other);
 
         assert_eq!(
             Ownership::get_all_ownerships_for_user_id(&mut conn, user.user_id).unwrap(),
@@ -223,13 +223,13 @@ mod tests {
     pub fn test_update_ownership_state(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.clone().get().unwrap();
 
-        let estate = crate::model::tests::create_test_estate(&mut conn);
+        let estate = crate::db::model::tests::create_test_estate(&mut conn);
 
-        let plot = crate::model::tests::create_test_plot(&mut conn, &estate);
+        let plot = crate::db::model::tests::create_test_plot(&mut conn, &estate);
 
-        let user = crate::model::tests::create_test_user(&mut conn);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
 
-        let ownership = crate::model::tests::create_test_ownership(&mut conn, &plot, &user);
+        let ownership = crate::db::model::tests::create_test_ownership(&mut conn, &plot, &user);
 
         let update_ownership = Ownership::update_ownership(
             &mut conn,

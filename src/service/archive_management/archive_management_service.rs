@@ -3,9 +3,9 @@ use super::archive_management_proto::{
     artifact_management_server::ArtifactManagement,
 };
 use crate::MIGRATIONS;
+use crate::db::model::user_permission::PermissionType;
+use crate::db::model::{artifact::Artifact as ArtifactModel, user::User as UserModel};
 use crate::jwt::Jwt;
-use crate::model::user_permission::PermissionType;
-use crate::model::{artifact::Artifact as ArtifactModel, user::User as UserModel};
 use crate::secure_storage::SecureStorage;
 use chrono::Utc;
 use diesel::{
@@ -132,9 +132,9 @@ impl ArtifactManagement for ArtifactManagementService {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::db::model::artifact::Artifact as ArtifactModel;
+    use crate::db::model::user_permission::PermissionType;
     use crate::jwt::ClaimsBuilder;
-    use crate::model::artifact::Artifact as ArtifactModel;
-    use crate::model::user_permission::PermissionType;
     use rstest::{fixture, rstest};
     use tempfile::TempDir;
 
@@ -160,7 +160,7 @@ mod tests {
             secure_storage,
         };
 
-        let user = crate::model::tests::create_test_user(&mut conn);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
 
         let token = jwt.encode_jwt_token(
             ClaimsBuilder::new(&user.user_name)
@@ -200,7 +200,7 @@ mod tests {
             secure_storage,
         };
 
-        let user = crate::model::tests::create_test_user(&mut conn);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
 
         let token = jwt.encode_jwt_token(ClaimsBuilder::new(&user.user_name).build());
 
@@ -231,7 +231,7 @@ mod tests {
             secure_storage,
         };
 
-        let user = crate::model::tests::create_test_user(&mut conn);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
 
         let token = jwt.encode_jwt_token(
             ClaimsBuilder::new(&user.user_name)
@@ -288,7 +288,7 @@ mod tests {
             secure_storage,
         };
 
-        let user = crate::model::tests::create_test_user(&mut conn);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
 
         let token = jwt.encode_jwt_token(ClaimsBuilder::new(&user.user_name).build());
 
@@ -318,7 +318,7 @@ mod tests {
             secure_storage,
         };
 
-        let user = crate::model::tests::create_test_user(&mut conn);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
 
         let token = jwt.encode_jwt_token(
             ClaimsBuilder::new(&user.user_name)

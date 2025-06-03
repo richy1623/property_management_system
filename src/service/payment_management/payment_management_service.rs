@@ -5,17 +5,14 @@ use diesel::{
 use diesel_migrations::MigrationHarness;
 use tonic::{Request, Response, Status};
 
-use crate::model::{ownership::Ownership, user::User as UserModel};
-use crate::{
-    MIGRATIONS,
-    jwt::Jwt,
-    model::{
-        ownership::Ownership as OwnershipModel,
-        payment::{Payment as PaymentModel, PaymentState},
-        user::User,
-        user_permission::PermissionType,
-    },
+use crate::db::model::{
+    ownership::Ownership as OwnershipModel,
+    payment::{Payment as PaymentModel, PaymentState},
+    user::User,
+    user_permission::PermissionType,
 };
+use crate::db::model::{ownership::Ownership, user::User as UserModel};
+use crate::{MIGRATIONS, jwt::Jwt};
 
 use super::payment_management_proto::{
     GetPaymentsForOwnershipRequest, GetPaymentsInStateRequest, Payment, PaymentCreationRequest,
@@ -240,10 +237,10 @@ mod tests {
 
         let mut conn = pool.get().unwrap();
 
-        let user = crate::model::tests::create_test_user(&mut conn);
-        let estate = crate::model::tests::create_test_estate(&mut conn);
-        let plot = &crate::model::tests::create_test_plot(&mut conn, &estate);
-        let ownership = crate::model::tests::create_test_ownership(&mut conn, &plot, &user);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
+        let estate = crate::db::model::tests::create_test_estate(&mut conn);
+        let plot = &crate::db::model::tests::create_test_plot(&mut conn, &estate);
+        let ownership = crate::db::model::tests::create_test_ownership(&mut conn, &plot, &user);
 
         let token = jwt.encode_jwt_token(
             ClaimsBuilder::new(&user.user_name)
@@ -292,10 +289,10 @@ mod tests {
 
         let mut conn = pool.get().unwrap();
 
-        let user = crate::model::tests::create_test_user(&mut conn);
-        let estate = crate::model::tests::create_test_estate(&mut conn);
-        let plot = &crate::model::tests::create_test_plot(&mut conn, &estate);
-        let ownership = crate::model::tests::create_test_ownership(&mut conn, &plot, &user);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
+        let estate = crate::db::model::tests::create_test_estate(&mut conn);
+        let plot = &crate::db::model::tests::create_test_plot(&mut conn, &estate);
+        let ownership = crate::db::model::tests::create_test_ownership(&mut conn, &plot, &user);
 
         // No permissions included in token
         let token = jwt.encode_jwt_token(ClaimsBuilder::new("another_user").build());
@@ -333,11 +330,11 @@ mod tests {
         };
 
         // Setup test data
-        let user = crate::model::tests::create_test_user(&mut conn);
-        let estate = crate::model::tests::create_test_estate(&mut conn);
-        let plot = crate::model::tests::create_test_plot(&mut conn, &estate);
-        let ownership = crate::model::tests::create_test_ownership(&mut conn, &plot, &user);
-        let payment = crate::model::tests::create_test_payment(&mut conn, &ownership, &user);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
+        let estate = crate::db::model::tests::create_test_estate(&mut conn);
+        let plot = crate::db::model::tests::create_test_plot(&mut conn, &estate);
+        let ownership = crate::db::model::tests::create_test_ownership(&mut conn, &plot, &user);
+        let payment = crate::db::model::tests::create_test_payment(&mut conn, &ownership, &user);
 
         // Encode token with permission
         let jwt_token = service.jwt.encode_jwt_token(
@@ -385,11 +382,11 @@ mod tests {
             jwt: Jwt::new("a-string-secret-at-least-256-bits-long"),
         };
 
-        let user = crate::model::tests::create_test_user(&mut conn);
-        let estate = crate::model::tests::create_test_estate(&mut conn);
-        let plot = crate::model::tests::create_test_plot(&mut conn, &estate);
-        let ownership = crate::model::tests::create_test_ownership(&mut conn, &plot, &user);
-        let payment = crate::model::tests::create_test_payment(&mut conn, &ownership, &user);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
+        let estate = crate::db::model::tests::create_test_estate(&mut conn);
+        let plot = crate::db::model::tests::create_test_plot(&mut conn, &estate);
+        let ownership = crate::db::model::tests::create_test_ownership(&mut conn, &plot, &user);
+        let payment = crate::db::model::tests::create_test_payment(&mut conn, &ownership, &user);
 
         let jwt_token = service
             .jwt
@@ -418,12 +415,12 @@ mod tests {
             jwt: Jwt::new("a-string-secret-at-least-256-bits-long"),
         };
 
-        let user = crate::model::tests::create_test_user(&mut conn);
-        let estate = crate::model::tests::create_test_estate(&mut conn);
-        let plot = crate::model::tests::create_test_plot(&mut conn, &estate);
-        let ownership = crate::model::tests::create_test_ownership(&mut conn, &plot, &user);
-        let payment_1 = crate::model::tests::create_test_payment(&mut conn, &ownership, &user);
-        let payment_2 = crate::model::tests::create_test_payment(&mut conn, &ownership, &user);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
+        let estate = crate::db::model::tests::create_test_estate(&mut conn);
+        let plot = crate::db::model::tests::create_test_plot(&mut conn, &estate);
+        let ownership = crate::db::model::tests::create_test_ownership(&mut conn, &plot, &user);
+        let payment_1 = crate::db::model::tests::create_test_payment(&mut conn, &ownership, &user);
+        let payment_2 = crate::db::model::tests::create_test_payment(&mut conn, &ownership, &user);
 
         let expected_payments = vec![(&payment_1).into(), (&payment_2).into()];
 
@@ -457,12 +454,12 @@ mod tests {
             jwt: Jwt::new("a-string-secret-at-least-256-bits-long"),
         };
 
-        let user = crate::model::tests::create_test_user(&mut conn);
-        let estate = crate::model::tests::create_test_estate(&mut conn);
-        let plot = crate::model::tests::create_test_plot(&mut conn, &estate);
-        let ownership = crate::model::tests::create_test_ownership(&mut conn, &plot, &user);
-        let payment_1 = crate::model::tests::create_test_payment(&mut conn, &ownership, &user);
-        let payment_2 = crate::model::tests::create_test_payment(&mut conn, &ownership, &user);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
+        let estate = crate::db::model::tests::create_test_estate(&mut conn);
+        let plot = crate::db::model::tests::create_test_plot(&mut conn, &estate);
+        let ownership = crate::db::model::tests::create_test_ownership(&mut conn, &plot, &user);
+        let payment_1 = crate::db::model::tests::create_test_payment(&mut conn, &ownership, &user);
+        let payment_2 = crate::db::model::tests::create_test_payment(&mut conn, &ownership, &user);
 
         let jwt_token = service.jwt.encode_jwt_token(
             ClaimsBuilder::new(&user.user_name)
@@ -505,11 +502,12 @@ mod tests {
             jwt: Jwt::new("a-string-secret-at-least-256-bits-long"),
         };
 
-        let user_valid = crate::model::tests::create_test_user(&mut conn);
-        let user_invalid = crate::model::tests::create_test_user(&mut conn);
-        let estate = crate::model::tests::create_test_estate(&mut conn);
-        let plot = crate::model::tests::create_test_plot(&mut conn, &estate);
-        let ownership = crate::model::tests::create_test_ownership(&mut conn, &plot, &user_valid);
+        let user_valid = crate::db::model::tests::create_test_user(&mut conn);
+        let user_invalid = crate::db::model::tests::create_test_user(&mut conn);
+        let estate = crate::db::model::tests::create_test_estate(&mut conn);
+        let plot = crate::db::model::tests::create_test_plot(&mut conn, &estate);
+        let ownership =
+            crate::db::model::tests::create_test_ownership(&mut conn, &plot, &user_valid);
 
         let jwt_token = service.jwt.encode_jwt_token(
             ClaimsBuilder::new(&user_invalid.user_name).build(), // No permissions
@@ -540,7 +538,7 @@ mod tests {
             jwt: Jwt::new("a-string-secret-at-least-256-bits-long"),
         };
 
-        let user = crate::model::tests::create_test_user(&mut conn);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
 
         let jwt_token = service.jwt.encode_jwt_token(
             ClaimsBuilder::new(&user.user_name).build(), // No permissions

@@ -2,9 +2,10 @@ use chrono::Utc;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::{model::payment::PaymentState, schema::payment_state_audit};
+use super::payment::PaymentState;
+use crate::db::schema::payment_state_audit;
 
-use super::Error;
+use crate::error::Error;
 
 #[derive(
     Queryable, Selectable, Insertable, Debug, PartialEq, Eq, Clone, Serialize, Deserialize,

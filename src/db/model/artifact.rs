@@ -1,8 +1,8 @@
-use crate::schema::artifact;
+use crate::db::schema::artifact;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use super::Error;
+use crate::error::Error;
 use chrono::Utc;
 
 #[derive(
@@ -70,7 +70,7 @@ mod tests {
         let file_display_name = "test_document.pdf";
         let file_path = "/tmp/test_document.pdf";
 
-        let user = crate::model::tests::create_test_user(&mut conn);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
 
         let artifact =
             Artifact::create_artifact(&mut conn, file_display_name, file_path, user.user_id, true)
@@ -92,8 +92,8 @@ mod tests {
     fn test_get_artifact(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.clone().get().unwrap();
 
-        let user = crate::model::tests::create_test_user(&mut conn);
-        let artifact = crate::model::tests::create_test_artifact(&mut conn, &user, "file_path");
+        let user = crate::db::model::tests::create_test_user(&mut conn);
+        let artifact = crate::db::model::tests::create_test_artifact(&mut conn, &user, "file_path");
 
         assert_eq!(
             artifact,

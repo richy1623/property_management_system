@@ -7,9 +7,9 @@ use once_cell::sync::Lazy;
 use rand_core::OsRng;
 use serde::{Deserialize, Serialize};
 
-use crate::schema::user;
+use crate::db::schema::user;
 
-use super::Error;
+use crate::error::Error;
 
 // Create the static Argon2 instance
 static ARGON2: Lazy<Argon2> = Lazy::new(|| {
@@ -144,9 +144,8 @@ mod tests {
         r2d2::{ConnectionManager, Pool},
     };
 
+    use super::*;
     use rstest::{fixture, rstest};
-
-    use crate::model::{Error, user::User};
 
     #[fixture]
     #[once]
@@ -192,7 +191,7 @@ mod tests {
     fn test_find_user_by_id(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.clone().get().unwrap();
 
-        let user = crate::model::tests::create_test_user(&mut conn);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
 
         assert_eq!(
             user,
@@ -206,7 +205,7 @@ mod tests {
     fn test_find_user_by_user_name(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.clone().get().unwrap();
 
-        let user = crate::model::tests::create_test_user(&mut conn);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
 
         assert_eq!(
             user,
@@ -220,7 +219,7 @@ mod tests {
     fn test_validate_login(pool: &Pool<ConnectionManager<PgConnection>>) {
         let mut conn = pool.clone().get().unwrap();
 
-        let user = crate::model::tests::create_test_user(&mut conn);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
 
         assert!(User::validate_login(&mut conn, &user.user_name, "password").is_ok());
 
