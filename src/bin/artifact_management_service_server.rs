@@ -5,9 +5,9 @@ use tonic::transport::Server;
 
 use property_management_system::{
     secure_storage::SecureStorage,
-    service::archive_management::{
-        archive_management_proto::artifact_management_server::ArtifactManagementServer,
-        archive_management_service::ArtifactManagementService,
+    service::artifact_management::{
+        artifact_management_proto::artifact_management_server::ArtifactManagementServer,
+        artifact_management_service::ArtifactManagementService,
     },
 };
 
