@@ -33,6 +33,8 @@ envy = "0.4.2"
 actix-web = { version = "4.11.0", features = [] }
 utoipa = { version = "5.3.1", features = ["macros", "actix_extras", "chrono"] }
 utoipa-swagger-ui = { version = "9.0.2", features = ["actix-web"] }
+tracing = "0.1.41"
+tracing-subscriber = "0.3.19"
 
 [build-dependencies]
 tonic-build = "0.13.1"

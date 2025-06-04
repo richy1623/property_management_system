@@ -2,7 +2,6 @@ use super::artifact_management_proto::{
     Artifact, ArtifactRef, GetArtifactRequest, StoreArtifactRequest,
     artifact_management_server::ArtifactManagement,
 };
-use crate::MIGRATIONS;
 use crate::db::model::user_permission::PermissionType;
 use crate::db::model::{artifact::Artifact as ArtifactModel, user::User as UserModel};
 use crate::jwt::Jwt;
@@ -12,14 +11,13 @@ use diesel::{
     PgConnection,
     r2d2::{ConnectionManager, Pool},
 };
-use diesel_migrations::MigrationHarness;
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
 pub struct ArtifactManagementService {
-    database_connection_pool: Pool<ConnectionManager<PgConnection>>,
-    jwt: Jwt,
-    secure_storage: SecureStorage,
+    pub database_connection_pool: Pool<ConnectionManager<PgConnection>>,
+    pub jwt: Jwt,
+    pub secure_storage: SecureStorage,
 }
 
 impl ArtifactManagementService {
@@ -28,16 +26,8 @@ impl ArtifactManagementService {
         jwt_secret_key: &str,
         secure_storage: SecureStorage,
     ) -> Self {
-        let database_connection_pool = crate::get_connection_pool(database_connection_url);
-        database_connection_pool
-            .clone()
-            .get()
-            .expect("Failed getting db pool")
-            .run_pending_migrations(MIGRATIONS)
-            .expect("Failed running migrations");
-
         ArtifactManagementService {
-            database_connection_pool: database_connection_pool,
+            database_connection_pool: crate::get_connection_pool(database_connection_url),
             jwt: Jwt::new(jwt_secret_key),
             secure_storage,
         }

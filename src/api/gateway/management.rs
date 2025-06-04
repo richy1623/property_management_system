@@ -1,7 +1,10 @@
+use std::sync::Arc;
+
 use actix_web::{HttpResponse, Scope, web};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
+use crate::api::AppServices;
 use crate::api::handler::estate_handler::{create_estate, list_estates};
 use crate::api::handler::ownership_handler::create_ownership;
 use crate::api::handler::payment_handler::{
@@ -10,8 +13,9 @@ use crate::api::handler::payment_handler::{
 use crate::api::handler::plot_handler::{create_plot, list_plots};
 use crate::api::handler::user_handler::{create_user, list_users, login_user};
 
-pub fn api_routes() -> Scope {
+pub fn api_routes(app_services: Arc<AppServices>) -> Scope {
     web::scope("/api")
+        .app_data(actix_web::web::Data::new(app_services.clone()))
         // User routes
         .service(
             web::scope("/user")

@@ -9,21 +9,32 @@ use diesel::prelude::*;
 use diesel::r2d2::ConnectionManager;
 use diesel::r2d2::Pool;
 use diesel_migrations::EmbeddedMigrations;
+use diesel_migrations::MigrationHarness;
 use dotenvy::dotenv;
 
 pub const MIGRATIONS: EmbeddedMigrations = diesel_migrations::embed_migrations!();
 
 pub fn get_connection_pool(database_url: &str) -> Pool<ConnectionManager<PgConnection>> {
+    // TODO cleanup
     dotenv().ok();
     // let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     let manager = ConnectionManager::<PgConnection>::new(database_url);
     // Refer to the `r2d2` documentation for more methods to use
     // when building a connection pool
-    Pool::builder()
+    let database_connection_pool = Pool::builder()
         .test_on_check_out(true)
         .min_idle(Some(1))
         .build(manager)
-        .expect("Could not build connection pool")
+        .expect("Could not build connection pool");
+
+    database_connection_pool
+        .clone()
+        .get()
+        .expect("Failed getting db pool connection")
+        .run_pending_migrations(MIGRATIONS)
+        .expect("Failed running migrations");
+
+    database_connection_pool
 }
 
 #[cfg(test)]

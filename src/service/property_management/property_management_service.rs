@@ -2,7 +2,6 @@ use diesel::{
     PgConnection,
     r2d2::{ConnectionManager, Pool},
 };
-use diesel_migrations::MigrationHarness;
 use tonic::{Request, Response, Status};
 
 use super::property_management_proto::{
@@ -14,25 +13,17 @@ use crate::db::model::ownership::Ownership as OwnershipModel;
 use crate::db::model::plot::Plot as PlotModel;
 use crate::db::model::user::User as UserModel;
 use crate::db::model::{estate::Estate as EstateModel, ownership::OwnershipState};
-use crate::{MIGRATIONS, db::model::user_permission::PermissionType, jwt::Jwt};
+use crate::{db::model::user_permission::PermissionType, jwt::Jwt};
 
 pub struct PropertyManagementService {
-    database_connection_pool: Pool<ConnectionManager<PgConnection>>,
-    jwt: Jwt,
+    pub database_connection_pool: Pool<ConnectionManager<PgConnection>>,
+    pub jwt: Jwt,
 }
 
 impl PropertyManagementService {
     pub fn new(database_connection_url: &str, jwt_secret_key: &str) -> Self {
-        let database_connection_pool = crate::get_connection_pool(database_connection_url);
-        database_connection_pool
-            .clone()
-            .get()
-            .expect("Failed getting db pool")
-            .run_pending_migrations(MIGRATIONS)
-            .expect("Failed running migrations");
-
         PropertyManagementService {
-            database_connection_pool: database_connection_pool,
+            database_connection_pool: crate::get_connection_pool(database_connection_url),
             jwt: Jwt::new(jwt_secret_key),
         }
     }
