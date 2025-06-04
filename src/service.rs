@@ -1,5 +1,5 @@
 // pub mod common_proto;
-pub mod archive_management;
+pub mod artifact_management;
 pub mod payment_management;
 pub mod property_management;
 pub mod user_management;

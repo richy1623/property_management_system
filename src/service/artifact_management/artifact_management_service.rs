@@ -1,4 +1,4 @@
-use super::archive_management_proto::{
+use super::artifact_management_proto::{
     Artifact, ArtifactRef, GetArtifactRequest, StoreArtifactRequest,
     artifact_management_server::ArtifactManagement,
 };
