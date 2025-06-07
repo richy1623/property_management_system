@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use actix_web::HttpResponse;
+use actix_web::{
+    HttpRequest, HttpResponse,
+    error::{Error, ErrorBadRequest, ErrorUnauthorized},
+};
 
 use crate::{
     jwt::Jwt,
@@ -24,6 +27,16 @@ pub struct AppServices {
     pub payment_management_service: Arc<PaymentManagementService>,
     pub property_management_service: Arc<PropertyManagementService>,
     pub archive_management_service: Arc<ArtifactManagementService>,
+}
+
+pub fn extract_authorization_header(http_request: &HttpRequest) -> Result<String, Error> {
+    match http_request.headers().get("Authorization") {
+        Some(value) => match value.to_str() {
+            Ok(s) => Ok(s.to_string()),
+            Err(_) => Err(ErrorBadRequest("Invalid Authorization header format")),
+        },
+        None => Err(ErrorUnauthorized("Missing Authorization header")),
+    }
 }
 
 impl AppServices {

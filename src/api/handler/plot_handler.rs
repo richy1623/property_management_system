@@ -1,5 +1,17 @@
-use crate::api::model::plot::{GetPlotsRequest, Plot, PlotCreationRequest, PlotList};
-use actix_web::{HttpResponse, Responder, web};
+use std::sync::Arc;
+
+use crate::{
+    api::{
+        AppServices,
+        model::plot::{GetPlotsRequest, Plot, PlotCreationRequest, PlotList},
+    },
+    service::property_management::property_management_proto::{
+        GetPlotsRequest as ProtoGetPlotsRequest, PlotCreationRequest as ProtoPlotCreationRequest,
+        property_management_server::PropertyManagement,
+    },
+};
+use actix_web::Result;
+use actix_web::{HttpRequest, HttpResponse, Responder, web};
 
 /// Create a new plot within an estate
 ///
@@ -20,8 +32,32 @@ use actix_web::{HttpResponse, Responder, web};
     ),
     tag = "Property Management"
 )]
-pub async fn create_plot(_payload: web::Json<PlotCreationRequest>) -> impl Responder {
-    HttpResponse::NotImplemented()
+pub async fn create_plot(
+    services: web::Data<Arc<AppServices>>,
+    http_request: HttpRequest,
+    payload: web::Json<PlotCreationRequest>,
+) -> Result<impl Responder> {
+    let authorization_header = crate::api::extract_authorization_header(&http_request)?;
+
+    let request = tonic::Request::new(ProtoPlotCreationRequest::from((
+        payload.into_inner(),
+        authorization_header,
+    )));
+
+    match services
+        .property_management_service
+        .create_plot(request)
+        .await
+    {
+        Ok(response) => {
+            // Convert the successful gRPC response into the HTTP response
+            Ok(HttpResponse::Ok().json(Plot::from(response.into_inner())))
+        }
+        Err(status) => {
+            // Map the gRPC error status to an appropriate HTTP response with logging
+            Ok(crate::api::map_grpc_error_to_http_response(status))
+        }
+    }
 }
 
 /// Retrieve plots filtered by optional criteria
@@ -43,6 +79,30 @@ pub async fn create_plot(_payload: web::Json<PlotCreationRequest>) -> impl Respo
     ),
     tag = "Property Management"
 )]
-pub async fn list_plots(_payload: web::Json<GetPlotsRequest>) -> impl Responder {
-    HttpResponse::NotImplemented()
+pub async fn list_plots(
+    services: web::Data<Arc<AppServices>>,
+    http_request: HttpRequest,
+    payload: web::Json<GetPlotsRequest>,
+) -> Result<impl Responder> {
+    let authorization_header = crate::api::extract_authorization_header(&http_request)?;
+
+    let request = tonic::Request::new(ProtoGetPlotsRequest::from((
+        payload.into_inner(),
+        authorization_header,
+    )));
+
+    match services
+        .property_management_service
+        .get_plots(request)
+        .await
+    {
+        Ok(response) => {
+            // Convert the successful gRPC response into the HTTP response
+            Ok(HttpResponse::Ok().json(PlotList::from(response.into_inner())))
+        }
+        Err(status) => {
+            // Map the gRPC error status to an appropriate HTTP response with logging
+            Ok(crate::api::map_grpc_error_to_http_response(status))
+        }
+    }
 }

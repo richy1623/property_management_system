@@ -2,9 +2,7 @@ use std::{env, net::Ipv4Addr, sync::Arc};
 
 use actix_web::{App, HttpServer, middleware::Logger};
 use dotenvy::dotenv;
-use property_management_system::{
-    api::AppServices, db::model::user::User, secure_storage::SecureStorage,
-};
+use property_management_system::{api::AppServices, secure_storage::SecureStorage};
 use tracing::Level;
 
 #[actix_web::main]

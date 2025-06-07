@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use actix_web::{HttpResponse, Responder, web};
+use actix_web::Result;
+use actix_web::{HttpRequest, HttpResponse, Responder, web};
 
 use crate::{
     api::{
@@ -106,28 +107,31 @@ pub async fn create_user(
 )]
 pub async fn list_users(
     services: web::Data<Arc<AppServices>>,
+    http_request: HttpRequest,
     payload: web::Json<ListUsersRequest>,
-) -> impl Responder {
+) -> Result<impl Responder> {
+    let authorization_header = crate::api::extract_authorization_header(&http_request)?;
+
     let request = tonic::Request::new(ProtoListUsersRequest::from((
         payload.into_inner(),
-        "".to_string(),
+        authorization_header,
     )));
 
     match services.user_management_service.list_users(request).await {
         Ok(response) => {
             // Convert the successful gRPC response into the HTTP response
-            HttpResponse::Created().json(
+            Ok(HttpResponse::Created().json(
                 response
                     .into_inner()
                     .users
                     .into_iter()
                     .map(|user| User::from(user))
                     .collect::<Vec<User>>(),
-            )
+            ))
         }
         Err(status) => {
             // Map the gRPC error status to an appropriate HTTP response with logging
-            crate::api::map_grpc_error_to_http_response(status)
+            Ok(crate::api::map_grpc_error_to_http_response(status))
         }
     }
 }
