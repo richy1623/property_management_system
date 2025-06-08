@@ -7,6 +7,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use crate::error::Error;
 
+#[derive(Clone)]
 pub struct SecureStorage {
     cipher: Aes256Gcm,
     root_path: PathBuf,

@@ -10,17 +10,12 @@ use diesel::r2d2::ConnectionManager;
 use diesel::r2d2::Pool;
 use diesel_migrations::EmbeddedMigrations;
 use diesel_migrations::MigrationHarness;
-use dotenvy::dotenv;
 
 pub const MIGRATIONS: EmbeddedMigrations = diesel_migrations::embed_migrations!();
 
 pub fn get_connection_pool(database_url: &str) -> Pool<ConnectionManager<PgConnection>> {
-    // TODO cleanup
-    dotenv().ok();
-    // let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     let manager = ConnectionManager::<PgConnection>::new(database_url);
-    // Refer to the `r2d2` documentation for more methods to use
-    // when building a connection pool
+
     let database_connection_pool = Pool::builder()
         .test_on_check_out(true)
         .min_idle(Some(1))
@@ -48,9 +43,9 @@ mod tests {
     use crate::MIGRATIONS;
 
     pub fn get_test_db_connection_pool(db_name: &str) -> Pool<ConnectionManager<PgConnection>> {
-        let admin_url = "postgres://username:password@localhost:5430/postgres"; // No specific DB yet
+        let database_url = "postgres://username:password@localhost:5430/postgres";
         let mut conn =
-            PgConnection::establish(admin_url).expect("Error connecting to Postgres server");
+            PgConnection::establish(database_url).expect("Error connecting to Postgres server");
 
         // First, drop the database if it exists
         let drop_db_sql = format!("DROP DATABASE IF EXISTS {}", db_name);

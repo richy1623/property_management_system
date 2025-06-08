@@ -71,7 +71,7 @@ impl ClaimsBuilder {
         self
     }
 
-    /// Optional override of the issuer (default is "my-app")
+    /// Optional override of the issuer `DEFAULT_ISSUER`
     pub fn iss<S: Into<String>>(mut self, iss: S) -> Self {
         self.iss = iss.into();
         self

@@ -4,7 +4,7 @@ use utoipa::ToSchema;
 use crate::db::model::ownership::OwnershipState;
 
 /// Ownership information linking a user to a plot.
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
 pub struct Ownership {
     #[schema(example = 1001)]
     pub ownership_id: i32,
@@ -28,7 +28,8 @@ pub struct Ownership {
 }
 
 /// Request for creating a new ownership.
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
+
 pub struct OwnershipCreationRequest {
     #[schema(example = 101)]
     pub user_id: i32,
@@ -46,7 +47,8 @@ pub struct OwnershipCreationRequest {
 }
 
 /// Request for updating an ownership.
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
+
 pub struct OwnershipUpdateRequest {
     #[schema(example = 1001)]
     pub ownership_id: i32,

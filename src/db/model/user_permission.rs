@@ -1,12 +1,13 @@
 use diesel::{insert_into, prelude::*};
 use diesel_derive_enum::DbEnum;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 use crate::db::schema::user_permission;
 
 use crate::error::Error;
 
-#[derive(Debug, Clone, PartialEq, Eq, DbEnum, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, DbEnum, Serialize, Deserialize, ToSchema)]
 #[db_enum(
     existing_type_path = "crate::db::schema::sql_types::PermissionType",
     value_style = "SCREAMING_SNAKE_CASE"

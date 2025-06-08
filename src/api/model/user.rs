@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 /// Login credentials used to authenticate a user.
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
 pub struct LoginRequest {
     /// The username of the user.
     #[schema(example = "john_doe")]
@@ -14,7 +14,7 @@ pub struct LoginRequest {
 }
 
 /// Represents the response containing the JWT access token issued after a successful login.
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
 pub struct AccessTokenResponse {
     /// The JWT access token string to be used for authorization in subsequent requests.
     #[schema(example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXCVI9...")]
@@ -24,7 +24,7 @@ pub struct AccessTokenResponse {
 }
 
 /// Payload to create a new user account.
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
 pub struct CreateUserRequest {
     /// Unique username for the user.
     #[schema(example = "john_doe")]
@@ -52,7 +52,7 @@ pub struct CreateUserRequest {
 }
 
 /// A fully populated user as stored in the database.
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
 pub struct User {
     /// Unique user ID.
     #[schema(example = 101)]
@@ -80,7 +80,7 @@ pub struct User {
 }
 
 /// Parameters to filter users in list query.
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
 pub struct ListUsersRequest {
     /// Filter users by exact username
     #[schema(example = "john_doe")]

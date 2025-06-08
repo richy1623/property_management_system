@@ -120,7 +120,7 @@ pub async fn list_users(
     match services.user_management_service.list_users(request).await {
         Ok(response) => {
             // Convert the successful gRPC response into the HTTP response
-            Ok(HttpResponse::Created().json(
+            Ok(HttpResponse::Ok().json(
                 response
                     .into_inner()
                     .users
@@ -133,5 +133,216 @@ pub async fn list_users(
             // Map the gRPC error status to an appropriate HTTP response with logging
             Ok(crate::api::map_grpc_error_to_http_response(status))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+
+    use crate::{
+        db::model::{user::User as UserModel, user_permission::PermissionType},
+        jwt::{ClaimsBuilder, Jwt},
+        secure_storage::SecureStorage,
+    };
+
+    use super::*;
+
+    use actix_web::{App, http::StatusCode, test};
+    use diesel::{
+        PgConnection,
+        r2d2::{ConnectionManager, Pool},
+    };
+    use rstest::{fixture, rstest};
+
+    #[fixture]
+    #[once]
+    pub fn test_services() -> (
+        AppServices,
+        Jwt,
+        SecureStorage,
+        Pool<ConnectionManager<PgConnection>>,
+    ) {
+        tracing_subscriber::fmt()
+            .with_max_level(tracing::Level::TRACE)
+            .init();
+        crate::api::tests::create_test_app_service("test_user_handler")
+    }
+
+    #[rstest]
+    #[actix_web::test]
+    async fn test_login_user_success(
+        test_services: &(
+            AppServices,
+            Jwt,
+            SecureStorage,
+            Pool<ConnectionManager<PgConnection>>,
+        ),
+    ) {
+        let (services, jwt, _secure_storage, pool) = test_services.clone();
+        let mut conn = pool.get().unwrap();
+
+        let app_services = Arc::new(services);
+        let app = test::init_service(
+            App::new()
+                .app_data(actix_web::web::Data::new(app_services.clone()))
+                .route("/api/user/login", web::post().to(login_user)),
+        )
+        .await;
+
+        let test_user =
+            UserModel::create_user(&mut conn, "john_doe", "name", None, None, None, "secret123")
+                .unwrap();
+
+        // Act: Send a login request with known test user credentials
+        let json_payload = fs::read_to_string(
+            "tests/resources/api/payload/user_management/request/login_request.json",
+        )
+        .expect("Failed to read JSON file");
+
+        let req = test::TestRequest::post()
+            .uri("/api/user/login")
+            .insert_header(("Content-Type", "application/json"))
+            .set_payload(json_payload)
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+
+        // Assert: Check HTTP status code and returned payload
+        assert_eq!(resp.status(), 200);
+        let response_json: AccessTokenResponse = test::read_body_json(resp).await;
+        assert_eq!(response_json.user_id, test_user.user_id);
+        assert!(jwt.decode_jwt_token(&response_json.access_token).is_ok());
+    }
+
+    #[rstest]
+    #[actix_web::test]
+    async fn test_create_user(
+        test_services: &(
+            AppServices,
+            Jwt,
+            SecureStorage,
+            Pool<ConnectionManager<PgConnection>>,
+        ),
+    ) {
+        let (services, _jwt, _secure_storage, pool) = test_services.clone();
+        let mut conn = pool.get().unwrap();
+
+        let app_services = Arc::new(services);
+        let app = test::init_service(
+            App::new()
+                .app_data(actix_web::web::Data::new(app_services.clone()))
+                .route("/api/user/create", web::post().to(create_user)),
+        )
+        .await;
+
+        // Act: Send a login request with known test user credentials
+        let json_payload = fs::read_to_string(
+            "tests/resources/api/payload/user_management/request/create_user_request.json",
+        )
+        .expect("Failed to read JSON file");
+
+        let req = test::TestRequest::post()
+            .uri("/api/user/create")
+            .insert_header(("Content-Type", "application/json"))
+            .set_payload(json_payload)
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+
+        // Assert: Check HTTP status code and returned payload
+        assert_eq!(resp.status(), StatusCode::CREATED);
+        let response_json: User = test::read_body_json(resp).await;
+
+        let inserted_user =
+            UserModel::get_user_by_user_id(&mut conn, response_json.user_id).unwrap();
+        assert_eq!(inserted_user.user_name, response_json.username);
+        assert_eq!(inserted_user.name, response_json.name);
+        assert_eq!(
+            inserted_user.cellphone_number,
+            response_json.cellphone_number
+        );
+        assert_eq!(
+            inserted_user.identification_number,
+            response_json.identification_number
+        );
+        assert_eq!(inserted_user.email_address, response_json.email_address);
+    }
+
+    #[rstest]
+    #[actix_web::test]
+    async fn test_list_users_success(
+        test_services: &(
+            AppServices,
+            Jwt,
+            SecureStorage,
+            Pool<ConnectionManager<PgConnection>>,
+        ),
+    ) {
+        let (services, jwt, _secure_storage, pool) = test_services.clone();
+        let mut conn = pool.get().unwrap();
+
+        let app_services = Arc::new(services);
+        let app = test::init_service(
+            App::new()
+                .app_data(actix_web::web::Data::new(app_services.clone()))
+                .route("/api/user/list", web::post().to(list_users)),
+        )
+        .await;
+
+        // Setup test users
+        let user_1: UserModel = UserModel::create_user(
+            &mut conn,
+            "alpha",
+            "Alice Eve",
+            Some("1234"),
+            Some("alice@mail.com"),
+            Some("ID123"),
+            "password",
+        )
+        .unwrap();
+        let user_2: UserModel = UserModel::create_user(
+            &mut conn,
+            "beta",
+            "Bob Eve",
+            Some("5678"),
+            Some("bob@mail.com"),
+            Some("ID456"),
+            "password",
+        )
+        .unwrap();
+
+        // Act: Send a login request with known test user credentials
+        let json_payload = fs::read_to_string(
+            "tests/resources/api/payload/user_management/request/list_users_request.json",
+        )
+        .expect("Failed to read JSON file");
+
+        let jwt_token = jwt.encode_jwt_token(
+            ClaimsBuilder::new(&user_1.user_name)
+                .permission(PermissionType::ViewUsers.to_string())
+                .build(),
+        );
+
+        let req = test::TestRequest::post()
+            .uri("/api/user/list")
+            .insert_header(("Content-Type", "application/json"))
+            .insert_header(("Authorization", jwt_token))
+            .set_payload(json_payload)
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+
+        // Assert: Check HTTP status code and returned payload
+        assert_eq!(resp.status(), StatusCode::OK);
+        let response_json: Vec<User> = test::read_body_json(resp).await;
+        assert_eq!(response_json.len(), 2);
+        assert_eq!(
+            response_json
+                .iter()
+                .map(|user| user.user_id)
+                .collect::<Vec<i32>>(),
+            vec![user_1.user_id, user_2.user_id]
+        )
     }
 }

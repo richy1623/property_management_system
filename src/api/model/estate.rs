@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 /// A residential estate.
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
 pub struct Estate {
     /// Unique identifier of the estate.
     #[schema(example = 1)]
@@ -26,7 +26,8 @@ pub struct Estate {
 }
 
 /// Request to create a new estate.
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
+
 pub struct EstateCreationRequest {
     /// Name of the estate.
     #[schema(example = "Sunrise Estate")]
@@ -46,7 +47,7 @@ pub struct EstateCreationRequest {
 }
 
 /// A list of estates.
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
 pub struct EstateList {
     /// Collection of estate objects.
     pub estates: Vec<Estate>,

@@ -4,7 +4,7 @@ use utoipa::ToSchema;
 use crate::db::model::ownership::OwnershipState;
 
 /// Represents a plot of land within an estate.
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
 pub struct Plot {
     /// Unique identifier of the plot.
     #[schema(example = 101)]
@@ -32,7 +32,8 @@ pub struct Plot {
 }
 
 /// Request to create a new plot in an estate.
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
+
 pub struct PlotCreationRequest {
     /// ID of the estate the plot belongs to.
     #[schema(example = 1)]
@@ -56,7 +57,8 @@ pub struct PlotCreationRequest {
 }
 
 /// Request to filter plots based on criteria.
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
+
 pub struct GetPlotsRequest {
     /// Filter by plot number.
     #[schema(example = "P-101")]
@@ -75,7 +77,7 @@ pub struct GetPlotsRequest {
 }
 
 /// A list of plots.
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
 pub struct PlotList {
     /// Collection of plot objects.
     pub plots: Vec<Plot>,

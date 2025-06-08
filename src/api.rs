@@ -93,3 +93,56 @@ pub fn map_grpc_error_to_http_response(status: tonic::Status) -> HttpResponse {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use diesel::{
+        PgConnection,
+        r2d2::{ConnectionManager, Pool},
+    };
+    use tempfile::TempDir;
+
+    use super::*;
+
+    pub fn create_test_app_service(
+        test_name: &str,
+    ) -> (
+        AppServices,
+        Jwt,
+        SecureStorage,
+        Pool<ConnectionManager<PgConnection>>,
+    ) {
+        let db_pool = crate::tests::get_test_db_connection_pool(test_name);
+
+        let temp_dir = TempDir::new().unwrap();
+        let secure_storage = SecureStorage::new(temp_dir.path(), &[0u8; 32]).unwrap();
+
+        let jwt_secret = "a-secret-at-least-256-bits-long";
+        let jwt = Jwt::new(jwt_secret);
+
+        (
+            AppServices {
+                user_management_service: Arc::new(UserManagementService {
+                    database_connection_pool: db_pool.clone(),
+                    jwt: Jwt::new(jwt_secret),
+                }),
+                payment_management_service: Arc::new(PaymentManagementService {
+                    database_connection_pool: db_pool.clone(),
+                    jwt: Jwt::new(jwt_secret),
+                }),
+                property_management_service: Arc::new(PropertyManagementService {
+                    database_connection_pool: db_pool.clone(),
+                    jwt: Jwt::new(jwt_secret),
+                }),
+                archive_management_service: Arc::new(ArtifactManagementService {
+                    database_connection_pool: db_pool.clone(),
+                    jwt: Jwt::new(jwt_secret),
+                    secure_storage: secure_storage.clone(),
+                }),
+            },
+            jwt,
+            secure_storage,
+            db_pool.clone(),
+        )
+    }
+}
