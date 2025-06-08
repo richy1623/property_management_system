@@ -21,11 +21,11 @@ jobs:
           POSTGRES_USER: username
           POSTGRES_PASSWORD: password
           POSTGRES_DB: db
+          POSTGRES_INITDB_ARGS: "-c max_connections=500"
         ports:
           - 5430:5432
         options: >-
-          --health-cmd pg_isready --health-interval 1s --health-timeout 1s --health-retries 20 postgres -c
-          max_connections=500
+          --health-cmd pg_isready --health-interval 1s --health-timeout 1s --health-retries 20
 
     steps:
       - uses: actions/checkout@v4
