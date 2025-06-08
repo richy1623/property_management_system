@@ -24,8 +24,8 @@ jobs:
         ports:
           - 5430:5432
         options: >-
-          --health-cmd pg_isready --health-interval 1s --health-timeout 1s --health-retries 20 --command "postgres -c
-          max_connections=500"
+          --health-cmd pg_isready --health-interval 1s --health-timeout 1s --health-retries 20 postgres -c
+          max_connections=500
 
     steps:
       - uses: actions/checkout@v4
