@@ -501,7 +501,7 @@ mod tests {
             plot_number: None,
             estate_id: None,
             phase: Some("Phase X".to_string()),
-            allowed_ownership_states: vec![0],
+            allowed_ownership_states: vec![OwnershipState::PendingContract as i32],
         };
 
         let plot_list = service

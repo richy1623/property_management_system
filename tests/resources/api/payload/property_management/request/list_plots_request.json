@@ -1,0 +1,4 @@
+{
+  "phase": "Phase 1",
+  "allowed_ownership_states": ["PendingContract"]
+}

@@ -39,7 +39,6 @@ pub struct PaymentList {
 
 /// Request to update payment state with optional comment.
 #[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
-
 pub struct UpdatePaymentStateRequest {
     #[schema(example = 1001)]
     pub payment_id: i32,

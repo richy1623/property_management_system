@@ -2,7 +2,6 @@ use diesel::{insert_into, prelude::*};
 use diesel_derive_enum::DbEnum;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
-use strum::Display;
 use utoipa::ToSchema;
 
 use crate::db::schema::ownership;
@@ -20,13 +19,13 @@ use crate::error::Error;
     TryFromPrimitive,
     IntoPrimitive,
     ToSchema,
-    Display,
 )]
-#[repr(i32)]
 #[db_enum(
     existing_type_path = "crate::db::schema::sql_types::OwnershipState",
     value_style = "SCREAMING_SNAKE_CASE"
 )]
+#[repr(i32)]
+#[derive(strum::Display)]
 #[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 pub enum OwnershipState {
     PendingContract = 0,

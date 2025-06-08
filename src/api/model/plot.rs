@@ -33,7 +33,6 @@ pub struct Plot {
 
 /// Request to create a new plot in an estate.
 #[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
-
 pub struct PlotCreationRequest {
     /// ID of the estate the plot belongs to.
     #[schema(example = 1)]
@@ -58,7 +57,6 @@ pub struct PlotCreationRequest {
 
 /// Request to filter plots based on criteria.
 #[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
-
 pub struct GetPlotsRequest {
     /// Filter by plot number.
     #[schema(example = "P-101")]
@@ -73,6 +71,7 @@ pub struct GetPlotsRequest {
     pub phase: Option<String>,
 
     /// List of allowed ownership states to filter by.
+    #[schema(example = "[PendingContract]")]
     pub allowed_ownership_states: Option<Vec<OwnershipState>>,
 }
 

@@ -27,7 +27,6 @@ pub struct Estate {
 
 /// Request to create a new estate.
 #[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
-
 pub struct EstateCreationRequest {
     /// Name of the estate.
     #[schema(example = "Sunrise Estate")]
