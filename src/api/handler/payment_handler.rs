@@ -94,7 +94,6 @@ pub async fn get_payments_in_state(
     http_request: HttpRequest,
     query: web::Query<PaymentsInStateQuery>,
 ) -> Result<impl Responder> {
-    tracing::debug!("query: {:?}", query);
     let authorization_header = crate::api::extract_authorization_header(&http_request)?;
 
     let request = tonic::Request::new(ProtoGetPaymentsInStateRequest::from((
@@ -194,9 +193,6 @@ mod tests {
         SecureStorage,
         Pool<ConnectionManager<PgConnection>>,
     ) {
-        tracing_subscriber::fmt()
-            .with_max_level(tracing::Level::DEBUG)
-            .init();
         crate::api::tests::create_test_app_service("test_payment_handler")
     }
 
