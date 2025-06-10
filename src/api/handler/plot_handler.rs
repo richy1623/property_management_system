@@ -20,7 +20,7 @@ use actix_web::{HttpRequest, HttpResponse, Responder, web};
 /// Authorization: bearer token.
 #[utoipa::path(
     post,
-    path = "/plot/create",
+    path = "/api/plot/create",
     request_body(content = PlotCreationRequest, description = "Plot creation data"),
     responses(
         (status = 201, description = "Plot created successfully", body = Plot),
@@ -67,7 +67,7 @@ pub async fn create_plot(
 /// Authorization: bearer token.
 #[utoipa::path(
     post,
-    path = "/plot/list",
+    path = "/api/plot/list",
     request_body(content = GetPlotsRequest, description = "Optional filters for plots"),
     responses(
         (status = 200, description = "List of plots", body = PlotList),
@@ -134,9 +134,6 @@ mod tests {
         SecureStorage,
         Pool<ConnectionManager<PgConnection>>,
     ) {
-        tracing_subscriber::fmt()
-            .with_max_level(tracing::Level::TRACE)
-            .init();
         crate::api::tests::create_test_app_service("test_plot_handler")
     }
 

@@ -163,9 +163,6 @@ mod tests {
         SecureStorage,
         Pool<ConnectionManager<PgConnection>>,
     ) {
-        tracing_subscriber::fmt()
-            .with_max_level(tracing::Level::TRACE)
-            .init();
         crate::api::tests::create_test_app_service("test_user_handler")
     }
 

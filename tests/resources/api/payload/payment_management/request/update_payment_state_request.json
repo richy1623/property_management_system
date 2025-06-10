@@ -1,0 +1,5 @@
+{
+  "payment_id": "{{payment_id}}",
+  "state": "Approved",
+  "comment": "Marked as completed after verification"
+}
