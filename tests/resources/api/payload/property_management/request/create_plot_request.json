@@ -1,5 +1,5 @@
 {
-  "estate_id": 1,
+  "estate_id": "{{estate_id}}",
   "plot_number": "P-101",
   "phase": "Phase 1",
   "length": 40,

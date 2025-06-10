@@ -19,6 +19,8 @@ pub struct AccessTokenResponse {
     /// The JWT access token string to be used for authorization in subsequent requests.
     #[schema(example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXCVI9...")]
     pub access_token: String,
+
+    /// Unique user ID.
     #[schema(example = "101")]
     pub user_id: i32,
 }

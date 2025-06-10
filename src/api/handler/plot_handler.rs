@@ -158,11 +158,20 @@ mod tests {
         )
         .await;
 
+        // Create database entries
+        let estate: crate::db::model::estate::Estate =
+            crate::db::model::tests::create_test_estate(&mut conn);
+
         // Act: Send a login request with known test user credentials
         let json_payload = fs::read_to_string(
             "tests/resources/api/payload/property_management/request/create_plot_request.json",
         )
         .expect("Failed to read JSON file");
+
+        let json_payload = json_payload.replace(
+            "\"{{estate_id}}\"",
+            &format!("{}", estate.estate_id.to_string()),
+        );
 
         let jwt_token = jwt.encode_jwt_token(
             ClaimsBuilder::new("admin")
@@ -187,6 +196,7 @@ mod tests {
         assert_eq!(response_json.phase, "Phase 1");
         assert_eq!(response_json.length, 40);
         assert_eq!(response_json.width, 30);
+        assert_eq!(response_json.estate_id, estate.estate_id);
 
         assert!(PlotModel::get_plot(&mut conn, response_json.plot_id).is_ok());
     }
