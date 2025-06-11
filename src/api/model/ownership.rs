@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 
 use crate::db::model::ownership::OwnershipState;
 
@@ -64,7 +64,7 @@ pub struct OwnershipUpdateRequest {
 }
 
 /// Filter parameters for querying ownerships
-#[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq, IntoParams)]
 pub struct OwnershipFilter {
     /// Optional user ID to filter ownerships
     #[schema(example = 10)]

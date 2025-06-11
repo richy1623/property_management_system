@@ -122,6 +122,32 @@ impl Ownership {
             .get_result(conn)
             .map_err(Into::into)
     }
+
+    pub fn get_ownerships_filtered(
+        conn: &mut PgConnection,
+        user_id: Option<i32>,
+        plot_id: Option<i32>,
+        state: Option<OwnershipState>,
+    ) -> Result<Vec<Ownership>, Error> {
+        let mut query = ownership::table.into_boxed();
+
+        if let Some(user_id) = user_id {
+            query = query.filter(ownership::user_id.eq(user_id));
+        }
+
+        if let Some(pid) = plot_id {
+            query = query.filter(ownership::plot_id.eq(pid));
+        }
+
+        if let Some(ownership_state) = state {
+            query = query.filter(ownership::state.eq(ownership_state));
+        }
+
+        query
+            .select(Ownership::as_select())
+            .get_results(conn)
+            .map_err(Into::into)
+    }
 }
 
 #[cfg(test)]
@@ -262,5 +288,70 @@ mod tests {
         let ownership_in_db = Ownership::get_ownership(&mut conn, ownership.ownership_id).unwrap();
 
         assert_eq!(update_ownership, ownership_in_db);
+    }
+
+    #[rstest]
+    pub fn test_get_ownerships_filtered(pool: &Pool<ConnectionManager<PgConnection>>) {
+        let mut conn = pool.clone().get().unwrap();
+
+        let estate = crate::db::model::tests::create_test_estate(&mut conn);
+
+        let plot_1 = crate::db::model::tests::create_test_plot(&mut conn, &estate);
+        let plot_2 = crate::db::model::tests::create_test_plot(&mut conn, &estate);
+        let plot_3 = crate::db::model::tests::create_test_plot(&mut conn, &estate);
+
+        let user_1 = crate::db::model::tests::create_test_user(&mut conn);
+        let user_2 = crate::db::model::tests::create_test_user(&mut conn);
+
+        let ownership_1 =
+            crate::db::model::tests::create_test_ownership(&mut conn, &plot_1, &user_1);
+        let ownership_2 =
+            crate::db::model::tests::create_test_ownership(&mut conn, &plot_2, &user_1);
+        let ownership_3 =
+            crate::db::model::tests::create_test_ownership(&mut conn, &plot_3, &user_2);
+        let ownership_4 =
+            crate::db::model::tests::create_test_ownership(&mut conn, &plot_1, &user_2);
+
+        let ownership_3 = Ownership::update_ownership(
+            &mut conn,
+            ownership_3.ownership_id,
+            Some(OwnershipState::Paid),
+            None,
+            None,
+            user_2.user_id,
+        )
+        .unwrap();
+
+        assert_eq!(
+            Ownership::get_ownerships_filtered(&mut conn, Some(user_1.user_id), None, None)
+                .unwrap(),
+            vec![ownership_1.clone(), ownership_2.clone()]
+        );
+        assert_eq!(
+            Ownership::get_ownerships_filtered(
+                &mut conn,
+                Some(user_1.user_id),
+                Some(plot_1.plot_id),
+                None
+            )
+            .unwrap(),
+            vec![ownership_1.clone()]
+        );
+        assert_eq!(
+            Ownership::get_ownerships_filtered(&mut conn, None, Some(plot_1.plot_id), None)
+                .unwrap(),
+            vec![ownership_1.clone(), ownership_4.clone()]
+        );
+        assert!(
+            Ownership::get_ownerships_filtered(&mut conn, None, None, Some(OwnershipState::Paid))
+                .unwrap()
+                .contains(&ownership_3)
+        );
+        let all_ownerships =
+            Ownership::get_ownerships_filtered(&mut conn, None, None, None).unwrap();
+        assert!(all_ownerships.contains(&ownership_1));
+        assert!(all_ownerships.contains(&ownership_2));
+        assert!(all_ownerships.contains(&ownership_3));
+        assert!(all_ownerships.contains(&ownership_4));
     }
 }

@@ -3,10 +3,12 @@ use std::sync::Arc;
 use crate::{
     api::{
         AppServices,
-        model::ownership::{Ownership, OwnershipCreationRequest, OwnershipUpdateRequest},
+        model::ownership::{
+            Ownership, OwnershipCreationRequest, OwnershipFilter, OwnershipUpdateRequest,
+        },
     },
     db::model::{
-        ownership::Ownership as OwnershipModel, ownership::OwnershipState, user::User as UserModel,
+        ownership::Ownership as OwnershipModel, user::User as UserModel,
         user_permission::PermissionType,
     },
     service::property_management::property_management_proto::property_management_server::PropertyManagement,
@@ -176,14 +178,13 @@ pub async fn get_ownership(
 
     // TODO don't early exit with information
     let ownership = OwnershipModel::get_ownership(&mut conn, ownership_id)?;
-    let user_requesting_update =
-        UserModel::get_user_by_user_name(&mut conn, &jwt_token.claims.sub)?;
+    let user_making_request = UserModel::get_user_by_user_name(&mut conn, &jwt_token.claims.sub)?;
 
     if !jwt_token
         .claims
         .permissions
         .contains(&PermissionType::ViewOwnerships.to_string())
-        && ownership.user_id != user_requesting_update.user_id
+        && ownership.user_id != user_making_request.user_id
     {
         return Err(ErrorUnauthorized(
             "Insufficient permissions to view ownership",
@@ -192,8 +193,94 @@ pub async fn get_ownership(
 
     Ok(HttpResponse::Ok().json(Ownership::from((
         ownership,
-        user_requesting_update.user_name.to_string(),
+        user_making_request.user_name.to_string(),
     ))))
+}
+
+/// Get ownership records with optional filters
+///
+/// Returns a list of ownership records matching the provided filters.
+/// Requires a valid bearer token for authorization.
+///
+/// Authorization: bearer token.
+///
+/// ### Example Query
+/// `/api/ownerships?user_id=10&plot_id=5&state=ACTIVE`
+#[utoipa::path(
+    get,
+    path = "/api/ownerships",
+    params(
+        OwnershipFilter
+    ),
+    responses(
+        (status = 200, description = "Ownerships retrieved successfully", body = [Ownership]),
+        (status = 401, description = "Unauthorized"),
+        (status = 500, description = "Internal server error")
+    ),
+    security(
+        ("bearerAuth" = [])
+    ),
+    tag = "Property Management"
+)]
+pub async fn get_ownerships(
+    services: web::Data<Arc<AppServices>>,
+    http_request: HttpRequest,
+    query: web::Query<OwnershipFilter>,
+) -> Result<impl Responder, actix_web::Error> {
+    let authorization_header = crate::api::extract_authorization_header(&http_request)?;
+    let jwt_token = services
+        .archive_management_service
+        .jwt
+        .decode_jwt_token(&authorization_header)?;
+
+    let mut conn = match services
+        .archive_management_service
+        .clone()
+        .database_connection_pool
+        .clone()
+        .get()
+    {
+        Ok(conn) => conn,
+        Err(error) => {
+            tracing::error!(
+                "Internal server error. Failed to establish connection to database: {:?}",
+                error
+            );
+            return Err(ErrorInternalServerError(
+                "Failed to establish connection to database",
+            ));
+        }
+    };
+
+    let user_making_request = UserModel::get_user_by_user_name(&mut conn, &jwt_token.claims.sub)?;
+
+    if !jwt_token
+        .claims
+        .permissions
+        .contains(&PermissionType::ViewOwnerships.to_string())
+        && query
+            .user_id
+            .filter(|user_id| user_id == &user_making_request.user_id)
+            .is_none()
+    {
+        return Err(ErrorUnauthorized(
+            "Insufficient permissions to view ownership",
+        ));
+    }
+
+    let ownerships = OwnershipModel::get_ownerships_filtered(
+        &mut conn,
+        query.user_id,
+        query.plot_id,
+        query.state.clone(),
+    )?;
+
+    let results: Vec<Ownership> = ownerships
+        .into_iter()
+        .map(|ownership| Ownership::from((ownership, user_making_request.user_name.clone())))
+        .collect();
+
+    Ok(HttpResponse::Ok().json(results))
 }
 
 #[cfg(test)]
@@ -367,9 +454,6 @@ mod tests {
             Pool<ConnectionManager<PgConnection>>,
         ),
     ) {
-        tracing_subscriber::fmt()
-            .with_max_level(tracing::Level::DEBUG)
-            .init();
         let (services, jwt, _secure_storage, pool) = test_services.clone();
         let mut conn = pool.get().unwrap();
 
@@ -416,5 +500,155 @@ mod tests {
             response_json.monthly_repayment_amount,
             ownership.monthly_repayment_amount
         );
+    }
+
+    #[rstest]
+    #[actix_web::test]
+    async fn test_get_ownership_unauthorized(
+        test_services: &(
+            AppServices,
+            Jwt,
+            SecureStorage,
+            Pool<ConnectionManager<PgConnection>>,
+        ),
+    ) {
+        let (services, jwt, _secure_storage, pool) = test_services.clone();
+        let mut conn = pool.get().unwrap();
+
+        let app_services = Arc::new(services);
+        let app = test::init_service(
+            App::new()
+                .app_data(actix_web::web::Data::new(app_services.clone()))
+                .route(
+                    "/api/ownership/{ownership_id}",
+                    web::get().to(get_ownership),
+                ),
+        )
+        .await;
+
+        // Create database entries
+        let estate = crate::db::model::tests::create_test_estate(&mut conn);
+        let plot = crate::db::model::tests::create_test_plot(&mut conn, &estate);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
+        let user_other = crate::db::model::tests::create_test_user(&mut conn);
+        let ownership = crate::db::model::tests::create_test_ownership(&mut conn, &plot, &user);
+
+        // Act: Send http request
+        let jwt_token = jwt.encode_jwt_token(ClaimsBuilder::new(&user_other.user_name).build());
+
+        let req = test::TestRequest::get()
+            .uri(&format!("/api/ownership/{}", ownership.ownership_id))
+            .insert_header(("Authorization", jwt_token))
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+
+        // Assert: Check HTTP status code and returned payload
+        assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[rstest]
+    #[actix_web::test]
+    async fn test_get_ownerships_filtered(
+        test_services: &(
+            AppServices,
+            Jwt,
+            SecureStorage,
+            Pool<ConnectionManager<PgConnection>>,
+        ),
+    ) {
+        let (services, jwt, _secure_storage, pool) = test_services.clone();
+        let mut conn = pool.get().unwrap();
+
+        let app_services = Arc::new(services);
+        let app = test::init_service(
+            App::new()
+                .app_data(actix_web::web::Data::new(app_services.clone()))
+                .route("/api/ownerships", web::get().to(get_ownerships)),
+        )
+        .await;
+
+        // --- Arrange test data ---
+        let estate = crate::db::model::tests::create_test_estate(&mut conn);
+        let plot = crate::db::model::tests::create_test_plot(&mut conn, &estate);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
+        let ownership = crate::db::model::tests::create_test_ownership(&mut conn, &plot, &user);
+
+        // --- Create JWT with permission ---
+        let jwt_token = jwt.encode_jwt_token(
+            ClaimsBuilder::new(&user.user_name)
+                .permission(PermissionType::ViewOwnerships.to_string())
+                .build(),
+        );
+
+        // --- Act: call GET /api/ownerships with filters ---
+        let uri = format!(
+            "/api/ownerships?user_id={}&plot_id={}&state={:?}",
+            ownership.user_id,
+            ownership.plot_id,
+            OwnershipState::PendingContract
+        );
+
+        let req = test::TestRequest::get()
+            .uri(&uri)
+            .insert_header(("Authorization", jwt_token))
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+
+        // --- Assert ---
+        assert_eq!(resp.status(), StatusCode::OK);
+        let response_json: Vec<Ownership> = test::read_body_json(resp).await;
+        assert!(response_json.contains(&Ownership::from((ownership, user.user_name.to_string()))));
+    }
+
+    #[rstest]
+    #[actix_web::test]
+    async fn test_get_ownerships_filtered_unauthorized(
+        test_services: &(
+            AppServices,
+            Jwt,
+            SecureStorage,
+            Pool<ConnectionManager<PgConnection>>,
+        ),
+    ) {
+        let (services, jwt, _secure_storage, pool) = test_services.clone();
+        let mut conn = pool.get().unwrap();
+
+        let app_services = Arc::new(services);
+        let app = test::init_service(
+            App::new()
+                .app_data(actix_web::web::Data::new(app_services.clone()))
+                .route("/api/ownerships", web::get().to(get_ownerships)),
+        )
+        .await;
+
+        // --- Arrange test data ---
+        let estate = crate::db::model::tests::create_test_estate(&mut conn);
+        let plot = crate::db::model::tests::create_test_plot(&mut conn, &estate);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
+        let user_other = crate::db::model::tests::create_test_user(&mut conn);
+        let ownership = crate::db::model::tests::create_test_ownership(&mut conn, &plot, &user);
+
+        // --- Create JWT with permission ---
+        let jwt_token = jwt.encode_jwt_token(ClaimsBuilder::new(&user_other.user_name).build());
+
+        // --- Act: call GET /api/ownerships with filters ---
+        let uri = format!(
+            "/api/ownerships?user_id={}&plot_id={}&state={:?}",
+            ownership.user_id,
+            ownership.plot_id,
+            OwnershipState::PendingContract
+        );
+
+        let req = test::TestRequest::get()
+            .uri(&uri)
+            .insert_header(("Authorization", jwt_token))
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+
+        // --- Assert ---
+        assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
     }
 }
