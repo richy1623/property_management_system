@@ -425,13 +425,12 @@ mod tests {
 
         // Act: Send http request
         let request_payload = fs::read_to_string(
-            "tests/resources/api/payload/payment_management/request/update_payment_state_request.json",
-        ).unwrap();
+            "tests/resources/api/payload/payment_management/request/update_payment_state.json",
+        )
+        .unwrap();
 
-        let request_payload = request_payload.replace(
-            "\"{{payment_id}}\"",
-            &format!("{}", payment.payment_id.to_string()),
-        );
+        let request_payload =
+            request_payload.replace("\"{{payment_id}}\"", &payment.payment_id.to_string());
 
         let jwt_token = jwt.encode_jwt_token(
             ClaimsBuilder::new("admin")

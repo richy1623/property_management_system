@@ -1,0 +1,6 @@
+{
+  "ownership_id": "{{ownership_id}}",
+  "state": "ActivePayment",
+  "total_sale_value": 5000000,
+  "monthly_repayment_amount": 50000
+}

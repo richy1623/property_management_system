@@ -164,14 +164,11 @@ mod tests {
 
         // Act: Send a login request with known test user credentials
         let json_payload = fs::read_to_string(
-            "tests/resources/api/payload/property_management/request/create_plot_request.json",
+            "tests/resources/api/payload/property_management/request/create_plot.json",
         )
         .expect("Failed to read JSON file");
 
-        let json_payload = json_payload.replace(
-            "\"{{estate_id}}\"",
-            &format!("{}", estate.estate_id.to_string()),
-        );
+        let json_payload = json_payload.replace("\"{{estate_id}}\"", &estate.estate_id.to_string());
 
         let jwt_token = jwt.encode_jwt_token(
             ClaimsBuilder::new("admin")
@@ -238,7 +235,7 @@ mod tests {
 
         // Act: Send a login request with known test user credentials
         let json_payload = fs::read_to_string(
-            "tests/resources/api/payload/property_management/request/list_plots_request.json",
+            "tests/resources/api/payload/property_management/request/list_plots.json",
         )
         .expect("Failed to read JSON file");
 

@@ -1,0 +1,7 @@
+{
+  "user_id": "{{user_id}}",
+  "plot_id": "{{plot_id}}",
+  "state": "PendingContract",
+  "total_sale_value": 5000000,
+  "monthly_repayment_amount": 50000
+}

@@ -80,6 +80,7 @@ impl PropertyManagement for PropertyManagementService {
         &self,
         _request: Request<Empty>,
     ) -> Result<Response<EstateList>, Status> {
+        // TODO auth?
         let mut conn = match self.database_connection_pool.clone().get() {
             Ok(conn) => conn,
             Err(e) => return Err(Status::internal(e.to_string())),

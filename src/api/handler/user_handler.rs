@@ -192,10 +192,9 @@ mod tests {
                 .unwrap();
 
         // Act: Send a login request with known test user credentials
-        let json_payload = fs::read_to_string(
-            "tests/resources/api/payload/user_management/request/login_request.json",
-        )
-        .expect("Failed to read JSON file");
+        let json_payload =
+            fs::read_to_string("tests/resources/api/payload/user_management/request/login.json")
+                .expect("Failed to read JSON file");
 
         let req = test::TestRequest::post()
             .uri("/api/user/login")
@@ -235,7 +234,7 @@ mod tests {
 
         // Act: Send a login request with known test user credentials
         let json_payload = fs::read_to_string(
-            "tests/resources/api/payload/user_management/request/create_user_request.json",
+            "tests/resources/api/payload/user_management/request/create_user.json",
         )
         .expect("Failed to read JSON file");
 
@@ -311,7 +310,7 @@ mod tests {
 
         // Act: Send a login request with known test user credentials
         let json_payload = fs::read_to_string(
-            "tests/resources/api/payload/user_management/request/list_users_request.json",
+            "tests/resources/api/payload/user_management/request/list_users.json",
         )
         .expect("Failed to read JSON file");
 
