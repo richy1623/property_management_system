@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
-use actix_web::{
-    HttpRequest, HttpResponse,
-    error::{Error, ErrorBadRequest, ErrorUnauthorized},
-};
+use actix_web::{Error as ActixError, error::*};
+use actix_web::{HttpRequest, HttpResponse};
+use diesel::result::DatabaseErrorKind;
 
 use crate::{
+    error::Error,
     jwt::Jwt,
     secure_storage::SecureStorage,
     service::{
@@ -28,13 +28,47 @@ pub struct AppServices {
     pub archive_management_service: Arc<ArtifactManagementService>,
 }
 
-pub fn extract_authorization_header(http_request: &HttpRequest) -> Result<String, Error> {
+pub fn extract_authorization_header(http_request: &HttpRequest) -> Result<String, ActixError> {
     match http_request.headers().get("Authorization") {
         Some(value) => match value.to_str() {
             Ok(s) => Ok(s.to_string()),
             Err(_) => Err(ErrorBadRequest("Invalid Authorization header format")),
         },
         None => Err(ErrorUnauthorized("Missing Authorization header")),
+    }
+}
+
+impl From<Error> for ActixError {
+    fn from(err: Error) -> Self {
+        match err {
+            Error::DatabaseError(diesel_err) => match diesel_err {
+                diesel::result::Error::NotFound => ErrorBadRequest("Resource not found"),
+                diesel::result::Error::DatabaseError(kind, info) => match kind {
+                    DatabaseErrorKind::UniqueViolation => ErrorConflict("Duplicate entry"),
+                    DatabaseErrorKind::UnableToSendCommand
+                    | DatabaseErrorKind::ClosedConnection => {
+                        ErrorServiceUnavailable("Database connection issue")
+                    }
+                    _ => {
+                        tracing::error!("Database error: {:?} - {:?}", kind, info);
+                        ErrorInternalServerError("Database error")
+                    }
+                },
+                diesel::result::Error::BrokenTransactionManager => ErrorServiceUnavailable(
+                    "Broken Transaction Manager, likely due to database connection issue",
+                ),
+                error => {
+                    tracing::error!("Database error: {:?}", error);
+                    ErrorInternalServerError("Database error")
+                }
+            },
+            Error::CryptographyError(crypto_err) => match crypto_err {
+                password_hash::Error::Password => ErrorUnauthorized("Invalid password"),
+                _ => ErrorInternalServerError("Internal cryptographic error"),
+            },
+            Error::AuthorizationError(jwt_err) => ErrorUnauthorized(jwt_err.to_string()),
+            Error::InternalError(message) => ErrorInternalServerError(message),
+        }
     }
 }
 

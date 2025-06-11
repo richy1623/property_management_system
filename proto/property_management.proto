@@ -9,7 +9,6 @@ service PropertyManagement {
     rpc GetPlots (GetPlotsRequest) returns (PlotList);
 
     rpc CreateOwnership (OwnershipCreationRequest) returns (Ownership);
-
     rpc UpdateOwnership (OwnershipUpdateRequest) returns (Ownership);
 }
 
@@ -100,5 +99,3 @@ message OwnershipUpdateRequest {
     optional int32 monthly_repayment_amount = 5;
 }
 
-// TODO 
-// get ownerships for user

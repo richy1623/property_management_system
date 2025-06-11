@@ -63,12 +63,30 @@ pub struct OwnershipUpdateRequest {
     pub monthly_repayment_amount: Option<i32>,
 }
 
+/// Filter parameters for querying ownerships
+#[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
+pub struct OwnershipFilter {
+    /// Optional user ID to filter ownerships
+    #[schema(example = 10)]
+    pub user_id: Option<i32>,
+
+    /// Optional plot ID to filter ownerships
+    #[schema(example = 5)]
+    pub plot_id: Option<i32>,
+
+    /// Optional state to filter ownerships
+    #[schema(example = "ACTIVE")]
+    pub state: Option<OwnershipState>,
+}
+
 mod converter {
     use super::*;
+    use crate::db::model::ownership::Ownership as OwnershipModel;
     use crate::service::property_management::property_management_proto::{
         Ownership as ProtoOwnership, OwnershipCreationRequest as ProtoOwnershipCreationRequest,
         OwnershipUpdateRequest as ProtoOwnershipUpdateRequest,
     };
+
     impl From<Ownership> for ProtoOwnership {
         fn from(ownership: Ownership) -> Self {
             Self {
@@ -145,6 +163,20 @@ mod converter {
                     .map(|state| state.try_into().unwrap()),
                 total_sale_value: ownership_update_request.total_sale_value,
                 monthly_repayment_amount: ownership_update_request.monthly_repayment_amount,
+            }
+        }
+    }
+
+    impl From<(OwnershipModel, String)> for Ownership {
+        fn from((ownership, username): (OwnershipModel, String)) -> Self {
+            Self {
+                ownership_id: ownership.ownership_id,
+                user_id: ownership.user_id,
+                user_name: username,
+                plot_id: ownership.plot_id,
+                state: ownership.state,
+                total_sale_value: ownership.total_sale_value,
+                monthly_repayment_amount: ownership.monthly_repayment_amount,
             }
         }
     }
