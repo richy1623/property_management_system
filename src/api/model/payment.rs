@@ -31,6 +31,25 @@ pub struct Payment {
     pub last_changed_by_user: i32,
 }
 
+///  Request for creating a new payment.
+#[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
+pub struct PaymentCreationRequest {
+    #[schema(example = 2001)]
+    pub ownership_id: i32,
+
+    #[schema(example = "2025-06-01", format = "date")]
+    pub date: NaiveDate,
+
+    #[schema(example = 50_000)]
+    pub amount: i32,
+
+    #[schema(example = "REF123456")]
+    pub reference: String,
+
+    #[schema(example = 101)]
+    pub user_creating_payment: i32,
+}
+
 /// List wrapper for payments
 #[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
 pub struct PaymentList {
@@ -64,11 +83,14 @@ pub struct PaymentsInStateQuery {
 
 mod converter {
     use super::*;
-    use crate::service::payment_management::payment_management_proto::{
-        GetPaymentsForOwnershipRequest as ProtoGetPaymentsForOwnershipRequest,
-        GetPaymentsInStateRequest as ProtoGetPaymentsInStateRequest, Payment as ProtoPayment,
-        PaymentList as ProtoPaymentList,
-        PaymentStateUpdateRequest as ProtoPaymentStateUpdateRequest,
+    use crate::{
+        db::model::payment::Payment as PaymentModel,
+        service::payment_management::payment_management_proto::{
+            GetPaymentsForOwnershipRequest as ProtoGetPaymentsForOwnershipRequest,
+            GetPaymentsInStateRequest as ProtoGetPaymentsInStateRequest, Payment as ProtoPayment,
+            PaymentList as ProtoPaymentList,
+            PaymentStateUpdateRequest as ProtoPaymentStateUpdateRequest,
+        },
     };
 
     impl From<Payment> for ProtoPayment {
@@ -177,6 +199,21 @@ mod converter {
                 state: get_payments_in_state_request.state.try_into().unwrap(),
                 offset: Some(get_payments_in_state_request.offset),
                 limit: Some(get_payments_in_state_request.limit),
+            }
+        }
+    }
+
+    impl From<PaymentModel> for Payment {
+        fn from(payment: PaymentModel) -> Self {
+            Self {
+                payment_id: payment.payment_id,
+                ownership_id: payment.ownership_id,
+                date: payment.date,
+                amount: payment.amount,
+                state: payment.state,
+                comment: payment.comment,
+                reference: payment.reference,
+                last_changed_by_user: payment.last_changed_by_user,
             }
         }
     }

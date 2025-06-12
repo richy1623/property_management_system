@@ -4,11 +4,16 @@ use crate::{
     api::{
         AppServices,
         model::payment::{
-            OwnershipPaymentsQuery, Payment, PaymentList, PaymentsInStateQuery,
-            UpdatePaymentStateRequest,
+            OwnershipPaymentsQuery, Payment, PaymentCreationRequest, PaymentList,
+            PaymentsInStateQuery, UpdatePaymentStateRequest,
         },
     },
-    db::model::payment::PaymentState,
+    db::model::{
+        ownership::Ownership,
+        payment::{Payment as PaymentModel, PaymentState},
+        user::User as UserModel,
+        user_permission::PermissionType,
+    },
     service::payment_management::payment_management_proto::{
         GetPaymentsForOwnershipRequest as ProtoGetPaymentsForOwnershipRequest,
         GetPaymentsInStateRequest as ProtoGetPaymentsInStateRequest,
@@ -16,8 +21,8 @@ use crate::{
         payment_management_server::PaymentManagement,
     },
 };
-use actix_web::Result;
-use actix_web::{HttpRequest, HttpResponse, Responder, web};
+use actix_web::{HttpRequest, HttpResponse, Responder, error::ErrorUnauthorized, web};
+use actix_web::{Result, error::ErrorInternalServerError};
 
 /// Retrieve payments for a given ownership
 ///
@@ -27,9 +32,6 @@ use actix_web::{HttpRequest, HttpResponse, Responder, web};
     get,
     path = "/api/payment/ownership",
     tag = "Payment Management",
-    summary = "Retrieve payments for a given ownership",
-    description = "Accepts an ownership ID and returns all payments associated with it.  
-                   Authorization: bearer token.",
     params(
         ("ownership_id" = i32, Query, description = "Ownership ID to filter payments by")
     ),
@@ -75,10 +77,6 @@ pub async fn get_payments_for_ownership(
     get,
     path = "/api/payment/state",
     tag = "Payment Management",
-    summary = "Retrieve payments filtered by state",
-    description = "Accepts a payment state and returns matching payments,  
-                   with optional pagination using offset and limit.  
-                   Authorization: bearer token.",
     params(
         ("state" = PaymentState, Query, description = "State of payments to filter by"),
         ("offset" = Option<i32>, Query, description = "Pagination offset"),
@@ -126,10 +124,6 @@ pub async fn get_payments_in_state(
     post,
     path = "/api/payment/update",
     tag = "Payment Management",
-    summary = "Update the state and comment of a payment",
-    description = "Accepts the payment ID, new state, and an optional comment,  
-                   and updates the corresponding payment record in the system.  
-                   Authorization: bearer token.",
     request_body(content = UpdatePaymentStateRequest, description = "Details of the payment update"),
     responses(
         (status = 200, description = "Updated payment", body = Payment),
@@ -140,12 +134,12 @@ pub async fn get_payments_in_state(
 pub async fn update_payment_state(
     services: web::Data<Arc<AppServices>>,
     http_request: HttpRequest,
-    query: web::Json<UpdatePaymentStateRequest>,
+    payload: web::Json<UpdatePaymentStateRequest>,
 ) -> Result<impl Responder> {
     let authorization_header = crate::api::extract_authorization_header(&http_request)?;
 
     let request = tonic::Request::new(ProtoUpdatePaymentStateRequest::from((
-        query.into_inner(),
+        payload.into_inner(),
         authorization_header,
     )));
 
@@ -163,6 +157,83 @@ pub async fn update_payment_state(
             Ok(crate::api::map_grpc_error_to_http_response(status))
         }
     }
+}
+
+/// Create a new payment record
+///
+/// Creates a new payment for a specific ownership. The authenticated user must either own the
+/// ownership or have the `ModifyPayments` permission.
+/// Authorization: bearer token.
+#[utoipa::path(
+    post,
+    path = "/api/payment/",
+    tag = "Payment Management",
+    request_body(content = UpdatePaymentStateRequest, description = "Details of the payment update"),
+    responses(
+        (status = 200, description = "Updated payment", body = Payment),
+        (status = 400, description = "Invalid input"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub async fn create_payment(
+    services: web::Data<Arc<AppServices>>,
+    http_request: HttpRequest,
+    payload: web::Json<PaymentCreationRequest>,
+) -> Result<impl Responder> {
+    let authorization_header = crate::api::extract_authorization_header(&http_request)?;
+
+    let payment_creation_request = payload.into_inner();
+
+    let jwt_token = services
+        .archive_management_service
+        .jwt
+        .decode_jwt_token(&authorization_header)?;
+
+    let mut conn = match services
+        .archive_management_service
+        .clone()
+        .database_connection_pool
+        .clone()
+        .get()
+    {
+        Ok(conn) => conn,
+        Err(error) => {
+            tracing::error!(
+                "Internal server error. Failed to establish connection to database: {:?}",
+                error
+            );
+            return Err(ErrorInternalServerError(
+                "Failed to establish connection to database",
+            ));
+        }
+    };
+
+    // TODO don't early exit
+    let user_making_request = UserModel::get_user_by_user_name(&mut conn, &jwt_token.claims.sub)?;
+    let ownership = Ownership::get_ownership(&mut conn, payment_creation_request.ownership_id)?;
+
+    if ownership.user_id != user_making_request.user_id
+        && !jwt_token
+            .claims
+            .permissions
+            .contains(&PermissionType::ModifyPayments.to_string())
+    {
+        return Err(ErrorUnauthorized(
+            "Insufficient permissions to create payment",
+        ));
+    }
+
+    let payment = PaymentModel::create_user_payment(
+        &mut conn,
+        ownership.ownership_id,
+        payment_creation_request.date,
+        payment_creation_request.amount,
+        &payment_creation_request.reference,
+        user_making_request.user_id,
+        "todo",
+    )?;
+
+    Ok(HttpResponse::Ok().json(Payment::from(payment)))
 }
 
 #[cfg(test)]
@@ -465,5 +536,117 @@ mod tests {
             "Marked as completed after verification"
         );
         assert_eq!(updated_payment.last_changed_by_user, 1);
+    }
+
+    #[rstest]
+    #[actix_web::test]
+    async fn test_create_payment(
+        test_services: &(
+            AppServices,
+            Jwt,
+            SecureStorage,
+            Pool<ConnectionManager<PgConnection>>,
+        ),
+    ) {
+        let (services, jwt, _secure_storage, pool) = test_services.clone();
+        let mut conn = pool.get().unwrap();
+
+        let app_services = Arc::new(services);
+        let app = test::init_service(
+            App::new()
+                .app_data(actix_web::web::Data::new(app_services.clone()))
+                .route("/api/payment/", web::post().to(create_payment)),
+        )
+        .await;
+
+        // --- Arrange test data ---
+        let estate = crate::db::model::tests::create_test_estate(&mut conn);
+        let plot = crate::db::model::tests::create_test_plot(&mut conn, &estate);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
+        let ownership = crate::db::model::tests::create_test_ownership(&mut conn, &plot, &user);
+
+        // JWT with default user (owner, no special permissions)
+        let jwt_token = jwt.encode_jwt_token(ClaimsBuilder::new(&user.user_name).build());
+
+        let json_payload = fs::read_to_string(
+            "tests/resources/api/payload/payment_management/request/create_payment.json",
+        )
+        .expect("Failed to read JSON file");
+        let json_payload =
+            json_payload.replace("\"{{ownership_id}}\"", &ownership.ownership_id.to_string());
+        let json_payload = json_payload.replace("\"{{user_id}}\"", &user.user_id.to_string());
+
+        // --- Act ---
+        let req = test::TestRequest::post()
+            .uri("/api/payment/")
+            .insert_header(("Authorization", jwt_token))
+            .insert_header(("Content-Type", "application/json"))
+            .set_payload(json_payload)
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+
+        // --- Assert ---
+        assert_eq!(resp.status(), StatusCode::OK);
+        let payment: Payment = test::read_body_json(resp).await;
+
+        assert_eq!(payment.ownership_id, ownership.ownership_id);
+        assert_eq!(payment.amount, 12000);
+        assert_eq!(payment.reference, "BANK-123");
+        assert_eq!(payment.last_changed_by_user, user.user_id);
+        assert_eq!(payment.state, PaymentState::PendingApproval);
+    }
+
+    #[rstest]
+    #[actix_web::test]
+    async fn test_create_payment_unauthorized(
+        test_services: &(
+            AppServices,
+            Jwt,
+            SecureStorage,
+            Pool<ConnectionManager<PgConnection>>,
+        ),
+    ) {
+        let (services, jwt, _secure_storage, pool) = test_services.clone();
+        let mut conn = pool.get().unwrap();
+
+        let app_services = Arc::new(services);
+        let app = test::init_service(
+            App::new()
+                .app_data(actix_web::web::Data::new(app_services.clone()))
+                .route("/api/payment/", web::post().to(create_payment)),
+        )
+        .await;
+
+        // --- Arrange test data ---
+        let estate = crate::db::model::tests::create_test_estate(&mut conn);
+        let plot = crate::db::model::tests::create_test_plot(&mut conn, &estate);
+        let user = crate::db::model::tests::create_test_user(&mut conn);
+        let user_other = crate::db::model::tests::create_test_user(&mut conn);
+        let ownership = crate::db::model::tests::create_test_ownership(&mut conn, &plot, &user);
+
+        // JWT with default user (owner, no special permissions)
+        let jwt_token = jwt.encode_jwt_token(ClaimsBuilder::new(&user_other.user_name).build());
+
+        let json_payload = fs::read_to_string(
+            "tests/resources/api/payload/payment_management/request/create_payment.json",
+        )
+        .expect("Failed to read JSON file");
+        let json_payload =
+            json_payload.replace("\"{{ownership_id}}\"", &ownership.ownership_id.to_string());
+        let json_payload = json_payload.replace("\"{{user_id}}\"", &user.user_id.to_string());
+
+        // --- Act ---
+        let req = test::TestRequest::post()
+            .uri("/api/payment/")
+            .insert_header(("Authorization", jwt_token))
+            .insert_header(("Content-Type", "application/json"))
+            .set_payload(json_payload)
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+
+        // --- Assert ---
+        assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
     }
 }

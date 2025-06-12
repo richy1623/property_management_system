@@ -1,0 +1,7 @@
+{
+  "ownership_id": "{{ownership_id}}",
+  "date": "2025-06-11",
+  "amount": 12000,
+  "reference": "BANK-123",
+  "user_creating_payment": "{{user_id}}"
+}
