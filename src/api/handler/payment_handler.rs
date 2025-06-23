@@ -35,6 +35,9 @@ use actix_web::{Result, error::ErrorInternalServerError};
     params(
         ("ownership_id" = i32, Query, description = "Ownership ID to filter payments by")
     ),
+    security(
+        ("bearerAuth" = [])
+    ),
     responses(
         (status = 200, description = "List of payments for ownership", body = PaymentList),
         (status = 400, description = "Missing or invalid input"),
@@ -82,6 +85,9 @@ pub async fn get_payments_for_ownership(
         ("offset" = Option<i32>, Query, description = "Pagination offset"),
         ("limit" = Option<i32>, Query, description = "Pagination limit")
     ),
+    security(
+        ("bearerAuth" = [])
+    ),
     responses(
         (status = 200, description = "List of payments filtered by state", body = PaymentList),
         (status = 401, description = "Unauthorized")
@@ -125,6 +131,9 @@ pub async fn get_payments_in_state(
     path = "/api/payment/update",
     tag = "Payment Management",
     request_body(content = UpdatePaymentStateRequest, description = "Details of the payment update"),
+    security(
+        ("bearerAuth" = [])
+    ),
     responses(
         (status = 200, description = "Updated payment", body = Payment),
         (status = 400, description = "Invalid input"),
@@ -169,6 +178,9 @@ pub async fn update_payment_state(
     path = "/api/payment/",
     tag = "Payment Management",
     request_body(content = UpdatePaymentStateRequest, description = "Details of the payment update"),
+    security(
+        ("bearerAuth" = [])
+    ),
     responses(
         (status = 200, description = "Updated payment", body = Payment),
         (status = 400, description = "Invalid input"),

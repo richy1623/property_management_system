@@ -6,9 +6,11 @@ use utoipa_swagger_ui::SwaggerUi;
 
 use crate::api::AppServices;
 use crate::api::handler::estate_handler::{create_estate, list_estates};
-use crate::api::handler::ownership_handler::create_ownership;
+use crate::api::handler::ownership_handler::{
+    create_ownership, get_ownership, get_ownerships, update_ownership,
+};
 use crate::api::handler::payment_handler::{
-    get_payments_for_ownership, get_payments_in_state, update_payment_state,
+    create_payment, get_payments_for_ownership, get_payments_in_state, update_payment_state,
 };
 use crate::api::handler::plot_handler::{create_plot, list_plots};
 use crate::api::handler::user_handler::{create_user, list_users, login_user};
@@ -36,10 +38,17 @@ pub fn api_routes(app_services: Arc<AppServices>) -> Scope {
                 .route("/list", web::post().to(list_plots)),
         )
         // Ownership routes
-        .service(web::scope("/ownership").route("/create", web::post().to(create_ownership)))
+        .service(
+            web::scope("/ownership")
+                .route("/", web::get().to(get_ownership))
+                .route("/create", web::post().to(create_ownership))
+                .route("/update", web::post().to(update_ownership)),
+        )
+        .service(web::scope("/ownerships").route("/", web::get().to(get_ownerships)))
         // Payment routes
         .service(
             web::scope("/payment")
+                .route("/", web::post().to(create_payment))
                 .route("/ownership", web::get().to(get_payments_for_ownership))
                 .route("/state", web::get().to(get_payments_in_state))
                 .route("/update", web::post().to(update_payment_state)),
@@ -58,14 +67,6 @@ pub fn api_routes(app_services: Arc<AppServices>) -> Scope {
 }
 
 pub mod doc {
-    use crate::api::model::{
-        estate::{Estate, EstateCreationRequest, EstateList},
-        ownership::{Ownership, OwnershipCreationRequest},
-        payment::{Payment, PaymentList, UpdatePaymentStateRequest},
-        plot::{GetPlotsRequest, Plot, PlotCreationRequest, PlotList},
-        user::{AccessTokenResponse, CreateUserRequest, ListUsersRequest, LoginRequest, User},
-    };
-    use crate::db::model::payment::PaymentState;
 
     use crate::api::handler::{
         estate_handler, ownership_handler, payment_handler, plot_handler, user_handler,
@@ -85,31 +86,13 @@ pub mod doc {
         plot_handler::create_plot,
         plot_handler::list_plots,
         ownership_handler::create_ownership,
+        ownership_handler::update_ownership,
+        ownership_handler::get_ownership,
+        ownership_handler::get_ownerships,
+        payment_handler::create_payment,
         payment_handler::get_payments_for_ownership,
         payment_handler::get_payments_in_state,
         payment_handler::update_payment_state,
-    ),
-    components(
-        schemas(
-            LoginRequest,
-            CreateUserRequest,
-            User,
-            ListUsersRequest,
-            AccessTokenResponse,
-            EstateCreationRequest,
-            Estate,
-            EstateList,
-            PlotCreationRequest,
-            Plot,
-            PlotList,
-            GetPlotsRequest,
-            OwnershipCreationRequest,
-            Ownership,
-            Payment,
-            PaymentList,
-            UpdatePaymentStateRequest,
-            PaymentState,
-        )
     ),
     tags(
         (name = "User Management", description = "Operations related to user authentication and management"),

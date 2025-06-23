@@ -52,7 +52,7 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         App::new().wrap(Logger::default()).service(
-            property_management_system::api::gateway::management::api_routes(app_services.clone()),
+            property_management_system::api::server::management::api_routes(app_services.clone()),
         )
     })
     .bind((Ipv4Addr::UNSPECIFIED, 8080))?

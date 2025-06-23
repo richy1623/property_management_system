@@ -7,7 +7,7 @@ edition = "2024"
 diesel = { version = "2.2.10", features = ["postgres", "chrono", "r2d2"] }
 diesel-derive-enum = { version = "3.0.0-beta.1", features = ["postgres"] }
 diesel_migrations = "2.2.0"
-pq-sys = { version = "0.7.1", features = ["bundled"] }
+pq-sys = { version = "0.7.2", features = ["bundled"] }
 openssl-sys = { version = "0.9.109", features = ["vendored"] }
 dotenvy = "0.15"
 serde = { version = "1.0", features = ["derive"] }
@@ -60,5 +60,5 @@ name = "property_management_service_server"
 path = "src/bin/property_management_service_server.rs"
 
 [[bin]]
-name = "management_api_gateway"
-path = "src/bin/management_api_gateway.rs"
+name = "management_api_server"
+path = "src/bin/management_api_server.rs"
