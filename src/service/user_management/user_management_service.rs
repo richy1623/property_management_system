@@ -6,7 +6,10 @@ use tonic::{Code, Request, Response, Status};
 
 use crate::jwt::{ClaimsBuilder, Jwt};
 use crate::{
-    db::model::{user::User as UserModel, user_permission::PermissionType},
+    db::model::{
+        user::User as UserModel, user_permission::PermissionType,
+        user_permission::UserPermission as UserPermissionModel,
+    },
     error::Error,
 };
 
@@ -85,10 +88,18 @@ impl UserManagement for UserManagementService {
             }
         };
 
+        let user_permissions: Vec<String> =
+            UserPermissionModel::get_all_user_permissions(&mut conn, user.user_id)?
+                .iter()
+                .map(|permission_type| permission_type.to_string())
+                .collect();
+
         Ok(Response::new(UserLoginResponse {
-            jwt_token: __self
-                .jwt
-                .encode_jwt_token(ClaimsBuilder::new(&user.user_name).build()),
+            jwt_token: __self.jwt.encode_jwt_token(
+                ClaimsBuilder::new(&user.user_name)
+                    .permissions(user_permissions)
+                    .build(),
+            ),
             user_id: user.user_id,
         }))
     }

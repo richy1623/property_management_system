@@ -21,7 +21,7 @@ use crate::service::property_management::property_management_proto::EstateCreati
 /// Authorization: bearer token.
 #[utoipa::path(
     post,
-    path = "/estate/create",
+    path = "/api/estate/create",
     request_body(content = EstateCreationRequest, description = "Estate creation data"),
     responses(
         (status = 201, description = "Estate created successfully", body = Estate),
@@ -67,7 +67,7 @@ pub async fn create_estate(
 /// Authorization: bearer token.
 #[utoipa::path(
     get,
-    path = "/estate/list",
+    path = "/api/estate/list",
     responses(
         (status = 200, description = "List of estates", body = EstateList),
         (status = 400, description = "Missing or invalid input"),

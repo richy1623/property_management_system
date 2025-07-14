@@ -30,10 +30,19 @@ pub struct AppServices {
 
 pub fn extract_authorization_header(http_request: &HttpRequest) -> Result<String, ActixError> {
     match http_request.headers().get("Authorization") {
-        Some(value) => match value.to_str() {
-            Ok(s) => Ok(s.to_string()),
-            Err(_) => Err(ErrorBadRequest("Invalid Authorization header format")),
-        },
+        Some(value) => {
+            let header_str = value
+                .to_str()
+                .map_err(|_| ErrorBadRequest("Invalid Authorization header format"))?;
+
+            if let Some(token) = header_str.strip_prefix("Bearer ") {
+                Ok(token.trim().to_string())
+            } else {
+                Err(ErrorUnauthorized(
+                    "Authorization header must be in Bearer format",
+                ))
+            }
+        }
         None => Err(ErrorUnauthorized("Missing Authorization header")),
     }
 }
