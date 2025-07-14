@@ -356,7 +356,7 @@ mod tests {
 
         let req = test::TestRequest::post()
             .uri("/api/ownership/create")
-            .insert_header(("Authorization", jwt_token))
+            .insert_header(("Authorization", format!("Bearer {jwt_token}")))
             .insert_header(("Content-Type", "application/json"))
             .set_payload(json_payload)
             .to_request();
@@ -420,7 +420,7 @@ mod tests {
 
         let req = test::TestRequest::post()
             .uri("/api/ownership/update")
-            .insert_header(("Authorization", jwt_token))
+            .insert_header(("Authorization", format!("Bearer {jwt_token}")))
             .insert_header(("Content-Type", "application/json"))
             .set_payload(json_payload)
             .to_request();
@@ -483,7 +483,7 @@ mod tests {
 
         let req = test::TestRequest::get()
             .uri(&format!("/api/ownership/{}", ownership.ownership_id))
-            .insert_header(("Authorization", jwt_token))
+            .insert_header(("Authorization", format!("Bearer {jwt_token}")))
             .to_request();
 
         let resp = test::call_service(&app, req).await;
@@ -538,7 +538,7 @@ mod tests {
 
         let req = test::TestRequest::get()
             .uri(&format!("/api/ownership/{}", ownership.ownership_id))
-            .insert_header(("Authorization", jwt_token))
+            .insert_header(("Authorization", format!("Bearer {jwt_token}")))
             .to_request();
 
         let resp = test::call_service(&app, req).await;
@@ -591,7 +591,7 @@ mod tests {
 
         let req = test::TestRequest::get()
             .uri(&uri)
-            .insert_header(("Authorization", jwt_token))
+            .insert_header(("Authorization", format!("Bearer {jwt_token}")))
             .to_request();
 
         let resp = test::call_service(&app, req).await;
@@ -643,7 +643,7 @@ mod tests {
 
         let req = test::TestRequest::get()
             .uri(&uri)
-            .insert_header(("Authorization", jwt_token))
+            .insert_header(("Authorization", format!("Bearer {jwt_token}")))
             .to_request();
 
         let resp = test::call_service(&app, req).await;

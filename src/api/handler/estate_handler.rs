@@ -163,7 +163,7 @@ mod tests {
 
         let req = test::TestRequest::post()
             .uri("/api/estate/create")
-            .insert_header(("Authorization", jwt_token))
+            .insert_header(("Authorization", format!("Bearer {jwt_token}")))
             .insert_header(("Content-Type", "application/json"))
             .set_payload(json_payload)
             .to_request();

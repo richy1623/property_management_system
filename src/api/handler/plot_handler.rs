@@ -179,7 +179,7 @@ mod tests {
         let req = test::TestRequest::post()
             .uri("/api/plot/create")
             .insert_header(("Content-Type", "application/json"))
-            .insert_header(("Authorization", jwt_token))
+            .insert_header(("Authorization", format!("Bearer {jwt_token}")))
             .set_payload(json_payload)
             .to_request();
 
@@ -250,7 +250,7 @@ mod tests {
         let req = test::TestRequest::post()
             .uri("/api/plot/list")
             .insert_header(("Content-Type", "application/json"))
-            .insert_header(("Authorization", jwt_token))
+            .insert_header(("Authorization", format!("Bearer {jwt_token}")))
             .set_payload(json_payload)
             .to_request();
 

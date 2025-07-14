@@ -358,7 +358,7 @@ mod tests {
                 "/api/payment/ownership?ownership_id={}",
                 ownership_1.ownership_id.to_string()
             ))
-            .insert_header(("Authorization", jwt_token))
+            .insert_header(("Authorization", format!("Bearer {jwt_token}")))
             .to_request();
 
         let resp = test::call_service(&app, req).await;
@@ -449,7 +449,7 @@ mod tests {
 
         let req = test::TestRequest::get()
             .uri("/api/payment/state?state=Approved")
-            .insert_header(("Authorization", jwt_token))
+            .insert_header(("Authorization", format!("Bearer {jwt_token}")))
             .to_request();
 
         let resp = test::call_service(&app, req).await;
@@ -523,7 +523,7 @@ mod tests {
 
         let req = test::TestRequest::post()
             .uri("/api/payment/update")
-            .insert_header(("Authorization", jwt_token))
+            .insert_header(("Authorization", format!("Bearer {jwt_token}")))
             .insert_header(("Content-Type", "application/json"))
             .set_payload(request_payload)
             .to_request();
@@ -591,7 +591,7 @@ mod tests {
         // --- Act ---
         let req = test::TestRequest::post()
             .uri("/api/payment/")
-            .insert_header(("Authorization", jwt_token))
+            .insert_header(("Authorization", format!("Bearer {jwt_token}")))
             .insert_header(("Content-Type", "application/json"))
             .set_payload(json_payload)
             .to_request();
@@ -651,7 +651,7 @@ mod tests {
         // --- Act ---
         let req = test::TestRequest::post()
             .uri("/api/payment/")
-            .insert_header(("Authorization", jwt_token))
+            .insert_header(("Authorization", format!("Bearer {jwt_token}")))
             .insert_header(("Content-Type", "application/json"))
             .set_payload(json_payload)
             .to_request();
