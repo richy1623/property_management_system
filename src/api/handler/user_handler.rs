@@ -42,8 +42,17 @@ pub async fn login_user(
             HttpResponse::Ok().json(AccessTokenResponse::from(response.into_inner()))
         }
         Err(status) => {
-            // Map the gRPC error status to an appropriate HTTP response with logging
-            crate::api::map_grpc_error_to_http_response(status)
+            // Match on the tonic::Status code and message to handle specific errors
+            match status.code() {
+                tonic::Code::NotFound => HttpResponse::NotFound().body("Incorrect username"),
+                tonic::Code::Unauthenticated => {
+                    HttpResponse::Unauthorized().body("Incorrect password")
+                }
+                _ => {
+                    // Fallback for all other errors
+                    crate::api::map_grpc_error_to_http_response(status)
+                }
+            }
         }
     }
 }

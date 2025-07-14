@@ -1,5 +1,6 @@
 use std::{env, net::Ipv4Addr, sync::Arc};
 
+use actix_cors::Cors;
 use actix_web::{App, HttpServer, middleware::Logger};
 use dotenvy::dotenv;
 use property_management_system::{api::AppServices, secure_storage::SecureStorage};
@@ -51,9 +52,20 @@ async fn main() -> std::io::Result<()> {
     // .unwrap();
 
     HttpServer::new(move || {
-        App::new().wrap(Logger::default()).service(
-            property_management_system::api::server::management::api_routes(app_services.clone()),
-        )
+        App::new()
+            .wrap(Logger::default())
+            .wrap(
+                // TODO remove for PROD
+                Cors::default()
+                    .allow_any_origin()
+                    .allow_any_method()
+                    .allow_any_header(),
+            )
+            .service(
+                property_management_system::api::server::management::api_routes(
+                    app_services.clone(),
+                ),
+            )
     })
     .bind((Ipv4Addr::UNSPECIFIED, 8080))?
     .run()

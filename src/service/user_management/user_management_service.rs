@@ -2,10 +2,13 @@ use diesel::{
     PgConnection,
     r2d2::{ConnectionManager, Pool},
 };
-use tonic::{Request, Response, Status};
+use tonic::{Code, Request, Response, Status};
 
-use crate::db::model::{user::User as UserModel, user_permission::PermissionType};
 use crate::jwt::{ClaimsBuilder, Jwt};
+use crate::{
+    db::model::{user::User as UserModel, user_permission::PermissionType},
+    error::Error,
+};
 
 use super::user_management_proto::{
     ListUsersRequest, ListUsersResponse, User, UserCreationRequest, UserLoginRequest,
@@ -62,7 +65,25 @@ impl UserManagement for UserManagementService {
 
         let request: &UserLoginRequest = request.get_ref();
 
-        let user = UserModel::validate_login(&mut conn, &request.user_name, &request.password)?;
+        let user = match UserModel::validate_login(&mut conn, &request.user_name, &request.password)
+        {
+            Ok(user) => user,
+            Err(Error::DatabaseError(diesel::result::Error::NotFound)) => {
+                // Unknown user case
+                return Err(Status::new(Code::NotFound, "Unknown user"));
+            }
+            Err(Error::CryptographyError(_)) => {
+                // Incorrect password case
+                return Err(Status::new(Code::Unauthenticated, "Incorrect password"));
+            }
+            Err(e) => {
+                // Other errors: map to internal server error or generic error
+                return Err(Status::new(
+                    Code::Internal,
+                    format!("Login failed: {:?}", e),
+                ));
+            }
+        };
 
         Ok(Response::new(UserLoginResponse {
             jwt_token: __self
