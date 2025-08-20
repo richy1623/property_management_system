@@ -135,8 +135,8 @@ impl Ownership {
             query = query.filter(ownership::user_id.eq(user_id));
         }
 
-        if let Some(pid) = plot_id {
-            query = query.filter(ownership::plot_id.eq(pid));
+        if let Some(plot_id) = plot_id {
+            query = query.filter(ownership::plot_id.eq(plot_id));
         }
 
         if let Some(ownership_state) = state {

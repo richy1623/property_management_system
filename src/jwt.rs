@@ -7,7 +7,8 @@ use serde::{Deserialize, Serialize};
 use crate::error::Error;
 
 const DEFAULT_ISSUER: &str = "my-app";
-const DEFAULT_EXPIRY: Duration = Duration::from_secs(30 * 60); // 60 minutes
+// const DEFAULT_EXPIRY: Duration = Duration::from_secs(30 * 60); // 60 minutes
+const DEFAULT_EXPIRY: Duration = Duration::from_secs(30 * 60 * 24 * 7); // TODO revert: 1 week
 
 static JWT_VALIDATION: Lazy<Validation> = Lazy::new(|| {
     let mut validation = Validation::new(jsonwebtoken::Algorithm::HS256); // adjust to match your algorithm

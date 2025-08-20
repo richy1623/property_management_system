@@ -252,7 +252,11 @@ pub async fn get_ownerships(
         }
     };
 
-    let user_making_request = UserModel::get_user_by_user_name(&mut conn, &jwt_token.claims.sub)?;
+    let user_making_request =
+        match UserModel::get_user_by_user_name(&mut conn, &jwt_token.claims.sub) {
+            Ok(user) => user,
+            Err(_) => return Err(ErrorUnauthorized("Invalid JWT user (subject) claim")),
+        };
 
     if !jwt_token
         .claims
