@@ -172,6 +172,7 @@ mod tests {
 
         let artifact = ArtifactModel::get_artifact(&mut conn, response.artifact_id).unwrap();
         assert_eq!(artifact.file_display_name, "Test File");
+        assert_eq!(artifact.upload_date, Utc::now().date_naive());
     }
 
     #[rstest]

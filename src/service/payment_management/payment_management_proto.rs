@@ -9,7 +9,7 @@ impl From<NaiveDate> for Date {
         Date {
             day: d.day().try_into().unwrap(),
             year: d.year_ce().1.try_into().unwrap(),
-            month: d.month0().try_into().unwrap(),
+            month: <u32 as TryInto<i32>>::try_into(d.month0()).unwrap() + 1,
         }
     }
 }

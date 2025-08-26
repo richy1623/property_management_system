@@ -187,7 +187,7 @@
         "operationId": "create_payment",
         "requestBody": {
           "description": "Details of the payment update",
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdatePaymentStateRequest" } } },
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaymentCreationRequest" } } },
           "required": true
         },
         "responses": {
@@ -614,6 +614,18 @@
           "payment_id": { "type": "integer", "format": "int32", "example": 1001 },
           "reference": { "type": "string", "example": "REF123456" },
           "state": { "$ref": "#/components/schemas/PaymentState" }
+        }
+      },
+      "PaymentCreationRequest": {
+        "type": "object",
+        "description": "Request for creating a new payment.",
+        "required": ["ownership_id", "date", "amount", "reference", "user_creating_payment"],
+        "properties": {
+          "amount": { "type": "integer", "format": "int32", "example": 50000 },
+          "date": { "type": "string", "format": "date", "example": "2025-06-01" },
+          "ownership_id": { "type": "integer", "format": "int32", "example": 2001 },
+          "reference": { "type": "string", "example": "REF123456" },
+          "user_creating_payment": { "type": "integer", "format": "int32", "example": 101 }
         }
       },
       "PaymentList": {

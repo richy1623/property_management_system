@@ -177,7 +177,7 @@ pub async fn update_payment_state(
     post,
     path = "/api/payment/",
     tag = "Payment Management",
-    request_body(content = UpdatePaymentStateRequest, description = "Details of the payment update"),
+    request_body(content = PaymentCreationRequest, description = "Details of the payment update"),
     security(
         ("bearerAuth" = [])
     ),
