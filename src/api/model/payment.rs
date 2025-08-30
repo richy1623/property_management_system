@@ -2,7 +2,7 @@ use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::db::model::payment::PaymentState;
+use crate::{api::model::artifact::ArtifactReference, db::model::payment::PaymentState};
 
 /// Represents a payment linked to an ownership.
 #[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
@@ -29,6 +29,20 @@ pub struct Payment {
 
     #[schema(example = 101)]
     pub last_changed_by_user: i32,
+
+    pub proof_of_payment: Option<ArtifactReference>,
+}
+
+/// File to be saved to as an artifact
+#[derive(Debug, ToSchema, Serialize, Deserialize, PartialEq)]
+pub struct ArtifactFile {
+    #[schema(example = "receipt.pdf")]
+    /// Display name of the uploaded file
+    pub file_name: String,
+
+    #[schema(value_type = String, format = Binary)]
+    /// Raw file contents as base64
+    pub file_content: Vec<u8>,
 }
 
 ///  Request for creating a new payment.
@@ -48,6 +62,8 @@ pub struct PaymentCreationRequest {
 
     #[schema(example = 101)]
     pub user_creating_payment: i32,
+
+    pub proof_of_payment_file: Option<ArtifactFile>,
 }
 
 /// List wrapper for payments
@@ -84,7 +100,7 @@ pub struct PaymentsInStateQuery {
 mod converter {
     use super::*;
     use crate::{
-        db::model::payment::Payment as PaymentModel,
+        db::model::{artifact::Artifact as ArtifactModel, payment::Payment as PaymentModel},
         service::payment_management::payment_management_proto::{
             GetPaymentsForOwnershipRequest as ProtoGetPaymentsForOwnershipRequest,
             GetPaymentsInStateRequest as ProtoGetPaymentsInStateRequest, Payment as ProtoPayment,
@@ -163,6 +179,8 @@ mod converter {
                 comment: payment.comment,
                 reference: payment.reference,
                 last_changed_by_user: payment.last_changed_by_user,
+                // TODO URGENT fix this to return the path
+                proof_of_payment: None,
             }
         }
     }
@@ -203,8 +221,16 @@ mod converter {
         }
     }
 
-    impl From<PaymentModel> for Payment {
-        fn from(payment: PaymentModel) -> Self {
+    impl From<(PaymentModel, Option<ArtifactModel>)> for Payment {
+        fn from((payment, artifact): (PaymentModel, Option<ArtifactModel>)) -> Self {
+            let artifact_reference = if let Some(artifact) = artifact {
+                Some(ArtifactReference {
+                    artifact_id: artifact.artifact_id,
+                    file_display_name: artifact.file_display_name,
+                })
+            } else {
+                None
+            };
             Self {
                 payment_id: payment.payment_id,
                 ownership_id: payment.ownership_id,
@@ -214,6 +240,7 @@ mod converter {
                 comment: payment.comment,
                 reference: payment.reference,
                 last_changed_by_user: payment.last_changed_by_user,
+                proof_of_payment: artifact_reference,
             }
         }
     }

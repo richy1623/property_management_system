@@ -9,6 +9,7 @@ use crate::{
         },
     },
     db::model::{
+        artifact::Artifact as ArtifactModel,
         ownership::Ownership,
         payment::{Payment as PaymentModel, PaymentState},
         user::User as UserModel,
@@ -23,6 +24,8 @@ use crate::{
 };
 use actix_web::{HttpRequest, HttpResponse, Responder, error::ErrorUnauthorized, web};
 use actix_web::{Result, error::ErrorInternalServerError};
+use chrono::Utc;
+use uuid::Uuid;
 
 /// Retrieve payments for a given ownership
 ///
@@ -235,6 +238,31 @@ pub async fn create_payment(
         ));
     }
 
+    let artifact =
+        if let Some(proof_of_payment_file) = payment_creation_request.proof_of_payment_file {
+            // Store the artifact
+            let file_name = Uuid::new_v4().to_string();
+            let stored_file_ref = services
+                .archive_management_service
+                .secure_storage
+                .store_file(
+                    &file_name,
+                    &proof_of_payment_file.file_content,
+                    Utc::now().date_naive(),
+                )
+                .await?;
+
+            Some(ArtifactModel::create_artifact(
+                &mut conn,
+                &proof_of_payment_file.file_name,
+                stored_file_ref.to_str().unwrap(),
+                user_making_request.user_id,
+                true,
+            )?)
+        } else {
+            None
+        };
+
     let payment = PaymentModel::create_user_payment(
         &mut conn,
         ownership.ownership_id,
@@ -242,10 +270,10 @@ pub async fn create_payment(
         payment_creation_request.amount,
         &payment_creation_request.reference,
         user_making_request.user_id,
-        "todo",
+        artifact.as_ref().map(|artifact| artifact.artifact_id),
     )?;
 
-    Ok(HttpResponse::Ok().json(Payment::from(payment)))
+    Ok(HttpResponse::Ok().json(Payment::from((payment, artifact))))
 }
 
 #[cfg(test)]
@@ -318,7 +346,7 @@ mod tests {
             "comment",
             "01",
             1,
-            "path",
+            None,
         )
         .unwrap();
         let payment_2 = PaymentModel::create_payment(
@@ -330,7 +358,7 @@ mod tests {
             "comment",
             "02",
             1,
-            "path",
+            None,
         )
         .unwrap();
         let payment_3 = PaymentModel::create_payment(
@@ -342,7 +370,7 @@ mod tests {
             "comment",
             "03",
             1,
-            "path",
+            None,
         )
         .unwrap();
 
@@ -412,7 +440,7 @@ mod tests {
             "comment",
             "01",
             1,
-            "path",
+            None,
         )
         .unwrap();
         let payment_2 = PaymentModel::create_payment(
@@ -424,7 +452,7 @@ mod tests {
             "comment",
             "02",
             1,
-            "path",
+            None,
         )
         .unwrap();
         let payment_3 = PaymentModel::create_payment(
@@ -436,7 +464,7 @@ mod tests {
             "comment",
             "03",
             1,
-            "path",
+            None,
         )
         .unwrap();
 
@@ -502,7 +530,7 @@ mod tests {
             "comment",
             "01",
             user.user_id,
-            "path",
+            None,
         )
         .unwrap();
 

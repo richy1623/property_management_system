@@ -85,7 +85,7 @@ pub mod tests {
             "comment",
             "reference",
             user.user_id,
-            "path/to/payment",
+            None,
         )
         .unwrap()
     }

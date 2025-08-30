@@ -62,7 +62,7 @@ diesel::table! {
         comment -> Text,
         reference -> Text,
         last_changed_by_user -> Int4,
-        proof_of_payment_path -> Text,
+        proof_of_payment_artifact -> Nullable<Int4>,
     }
 }
 

@@ -49,7 +49,7 @@ pub struct Payment {
     pub comment: String,
     pub reference: String,
     pub last_changed_by_user: i32,
-    pub proof_of_payment_path: String,
+    pub proof_of_payment_artifact: Option<i32>,
 }
 
 impl Payment {
@@ -62,7 +62,7 @@ impl Payment {
         comment: &str,
         reference: &str,
         last_changed_by_user: i32,
-        proof_of_payment_path: &str,
+        proof_of_payment_artifact: Option<i32>,
     ) -> Result<Payment, Error> {
         insert_into(payment::table)
             .values((
@@ -73,7 +73,7 @@ impl Payment {
                 payment::comment.eq(comment),
                 payment::reference.eq(reference),
                 payment::last_changed_by_user.eq(last_changed_by_user),
-                payment::proof_of_payment_path.eq(proof_of_payment_path),
+                payment::proof_of_payment_artifact.eq(proof_of_payment_artifact),
             ))
             .get_result(conn)
             .map_err(Into::into)
@@ -86,7 +86,7 @@ impl Payment {
         amount: i32,
         reference: &str,
         last_changed_by_user: i32,
-        proof_of_payment_path: &str,
+        proof_of_payment_artifact: Option<i32>,
     ) -> Result<Payment, Error> {
         Payment::create_payment(
             conn,
@@ -97,7 +97,7 @@ impl Payment {
             USER_SUBMITTED_PAYMENT_COMMENT,
             reference,
             last_changed_by_user,
-            proof_of_payment_path,
+            proof_of_payment_artifact,
         )
     }
 
@@ -182,6 +182,7 @@ mod tests {
         let plot = crate::db::model::tests::create_test_plot(&mut conn, &estate);
         let user = crate::db::model::tests::create_test_user(&mut conn);
         let ownership = crate::db::model::tests::create_test_ownership(&mut conn, &plot, &user);
+        let artifact = crate::db::model::tests::create_test_artifact(&mut conn, &user, "file/path");
 
         let date = NaiveDate::from_ymd_opt(2025, 09, 05).unwrap();
 
@@ -194,7 +195,7 @@ mod tests {
             "comment",
             "reference",
             user.user_id,
-            "path/to/payment",
+            Some(artifact.artifact_id),
         )
         .unwrap();
 
@@ -205,7 +206,10 @@ mod tests {
         assert_eq!(payment.comment, "comment");
         assert_eq!(payment.reference, "reference");
         assert_eq!(payment.last_changed_by_user, user.user_id);
-        assert_eq!(payment.proof_of_payment_path, "path/to/payment");
+        assert_eq!(
+            payment.proof_of_payment_artifact,
+            Some(artifact.artifact_id)
+        );
 
         assert_eq!(
             payment,
@@ -407,7 +411,7 @@ mod tests {
             100,
             "reference",
             user.user_id,
-            "path",
+            None,
         )
         .unwrap();
 
@@ -418,6 +422,6 @@ mod tests {
         assert_eq!(payment.comment, USER_SUBMITTED_PAYMENT_COMMENT);
         assert_eq!(payment.reference, "reference");
         assert_eq!(payment.last_changed_by_user, user.user_id);
-        assert_eq!(payment.proof_of_payment_path, "path");
+        assert_eq!(payment.proof_of_payment_artifact, None);
     }
 }

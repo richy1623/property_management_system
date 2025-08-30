@@ -73,7 +73,7 @@ impl PaymentManagement for PaymentManagementService {
             "comment",
             &payment_creation_request.reference,
             user.user_id,
-            "payment_creation_request.proof_of_payment_path",
+            None,
         )?;
 
         Ok(Response::new((&payment).into()))
