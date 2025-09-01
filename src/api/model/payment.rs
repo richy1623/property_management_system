@@ -87,14 +87,18 @@ pub struct UpdatePaymentStateRequest {
 
 #[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
 pub struct OwnershipPaymentsQuery {
-    ownership_id: i32,
+    #[schema(example = 1001)]
+    pub ownership_id: i32,
 }
 
 #[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
 pub struct PaymentsInStateQuery {
-    state: PaymentState,
-    offset: Option<i32>,
-    limit: Option<i32>,
+    #[schema(example = PendingApproval)]
+    pub state: PaymentState,
+    #[schema(example = 0)]
+    pub offset: Option<i32>,
+    #[schema(example = 10)]
+    pub limit: Option<i32>,
 }
 
 mod converter {
@@ -221,12 +225,12 @@ mod converter {
         }
     }
 
-    impl From<(PaymentModel, Option<ArtifactModel>)> for Payment {
-        fn from((payment, artifact): (PaymentModel, Option<ArtifactModel>)) -> Self {
+    impl From<(&PaymentModel, Option<&ArtifactModel>)> for Payment {
+        fn from((payment, artifact): (&PaymentModel, Option<&ArtifactModel>)) -> Self {
             let artifact_reference = if let Some(artifact) = artifact {
                 Some(ArtifactReference {
                     artifact_id: artifact.artifact_id,
-                    file_display_name: artifact.file_display_name,
+                    file_display_name: artifact.file_display_name.clone(),
                 })
             } else {
                 None
@@ -236,9 +240,9 @@ mod converter {
                 ownership_id: payment.ownership_id,
                 date: payment.date,
                 amount: payment.amount,
-                state: payment.state,
-                comment: payment.comment,
-                reference: payment.reference,
+                state: payment.state.clone(),
+                comment: payment.comment.clone(),
+                reference: payment.reference.clone(),
                 last_changed_by_user: payment.last_changed_by_user,
                 proof_of_payment: artifact_reference,
             }

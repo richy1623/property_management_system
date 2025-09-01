@@ -10,14 +10,12 @@ use crate::{
     },
     db::model::{
         artifact::Artifact as ArtifactModel,
-        ownership::Ownership,
+        ownership::Ownership as OwnershipModel,
         payment::{Payment as PaymentModel, PaymentState},
         user::User as UserModel,
         user_permission::PermissionType,
     },
     service::payment_management::payment_management_proto::{
-        GetPaymentsForOwnershipRequest as ProtoGetPaymentsForOwnershipRequest,
-        GetPaymentsInStateRequest as ProtoGetPaymentsInStateRequest,
         PaymentStateUpdateRequest as ProtoUpdatePaymentStateRequest,
         payment_management_server::PaymentManagement,
     },
@@ -54,25 +52,55 @@ pub async fn get_payments_for_ownership(
 ) -> Result<impl Responder> {
     let authorization_header = crate::api::extract_authorization_header(&http_request)?;
 
-    let request = tonic::Request::new(ProtoGetPaymentsForOwnershipRequest::from((
-        query.into_inner(),
-        authorization_header,
-    )));
+    let get_payments_request = query.into_inner();
 
-    match services
+    let mut conn = super::get_database_connection(
+        services
+            .archive_management_service
+            .database_connection_pool
+            .clone(),
+    )?;
+
+    // Validate JWT
+    let jwt_token = services
         .payment_management_service
-        .get_payments_for_ownership(request)
-        .await
+        .jwt
+        .decode_jwt_token(&authorization_header)?;
+
+    let ownership = OwnershipModel::get_ownership(&mut conn, get_payments_request.ownership_id)?;
+    let user = UserModel::get_user_by_user_id(&mut conn, ownership.user_id)?;
+
+    if jwt_token.claims.sub != user.user_name
+        && !jwt_token
+            .claims
+            .permissions
+            .contains(&PermissionType::ViewPayments.to_string())
     {
-        Ok(response) => {
-            // Convert the successful gRPC response into the HTTP response
-            Ok(HttpResponse::Ok().json(PaymentList::from(response.into_inner())))
-        }
-        Err(status) => {
-            // Map the gRPC error status to an appropriate HTTP response with logging
-            Ok(crate::api::map_grpc_error_to_http_response(status))
-        }
+        return Err(ErrorUnauthorized(
+            "Insufficient permissions to view payments",
+        ));
     }
+
+    let payments = PaymentModel::get_all_payments_for_ownership_id(
+        &mut conn,
+        get_payments_request.ownership_id,
+    )?;
+
+    Ok(HttpResponse::Ok().json(PaymentList {
+        payments: payments
+            .into_iter()
+            .map(|payment| {
+                Payment::from((
+                    &payment,
+                    payment
+                        .proof_of_payment_artifact
+                        .map(|artifact_id| ArtifactModel::get_artifact(&mut conn, artifact_id).ok())
+                        .unwrap_or(None)
+                        .as_ref(),
+                ))
+            })
+            .collect(),
+    }))
 }
 
 /// Retrieve payments filtered by state
@@ -103,25 +131,53 @@ pub async fn get_payments_in_state(
 ) -> Result<impl Responder> {
     let authorization_header = crate::api::extract_authorization_header(&http_request)?;
 
-    let request = tonic::Request::new(ProtoGetPaymentsInStateRequest::from((
-        query.into_inner(),
-        authorization_header,
-    )));
+    let get_payments_request = query.into_inner();
 
-    match services
+    let mut conn = super::get_database_connection(
+        services
+            .archive_management_service
+            .database_connection_pool
+            .clone(),
+    )?;
+
+    // Validate JWT
+    let jwt_token = services
         .payment_management_service
-        .get_payments_in_state(request)
-        .await
+        .jwt
+        .decode_jwt_token(&authorization_header)?;
+
+    if !jwt_token
+        .claims
+        .permissions
+        .contains(&PermissionType::ViewPayments.to_string())
     {
-        Ok(response) => {
-            // Convert the successful gRPC response into the HTTP response
-            Ok(HttpResponse::Ok().json(PaymentList::from(response.into_inner())))
-        }
-        Err(status) => {
-            // Map the gRPC error status to an appropriate HTTP response with logging
-            Ok(crate::api::map_grpc_error_to_http_response(status))
-        }
+        return Err(ErrorUnauthorized(
+            "Insufficient permissions to view payments",
+        ));
     }
+
+    let payments = PaymentModel::get_all_payments_in_state(
+        &mut conn,
+        get_payments_request.state,
+        get_payments_request.offset.unwrap_or(0) as i64,
+        get_payments_request.limit.unwrap_or(10) as i64,
+    )?;
+
+    Ok(HttpResponse::Ok().json(PaymentList {
+        payments: payments
+            .into_iter()
+            .map(|payment| {
+                Payment::from((
+                    &payment,
+                    payment
+                        .proof_of_payment_artifact
+                        .map(|artifact_id| ArtifactModel::get_artifact(&mut conn, artifact_id).ok())
+                        .unwrap_or(None)
+                        .as_ref(),
+                ))
+            })
+            .collect(),
+    }))
 }
 
 /// Update the state and comment of a payment
@@ -225,7 +281,8 @@ pub async fn create_payment(
 
     // TODO don't early exit
     let user_making_request = UserModel::get_user_by_user_name(&mut conn, &jwt_token.claims.sub)?;
-    let ownership = Ownership::get_ownership(&mut conn, payment_creation_request.ownership_id)?;
+    let ownership =
+        OwnershipModel::get_ownership(&mut conn, payment_creation_request.ownership_id)?;
 
     if ownership.user_id != user_making_request.user_id
         && !jwt_token
@@ -273,7 +330,7 @@ pub async fn create_payment(
         artifact.as_ref().map(|artifact| artifact.artifact_id),
     )?;
 
-    Ok(HttpResponse::Ok().json(Payment::from((payment, artifact))))
+    Ok(HttpResponse::Ok().json(Payment::from((&payment, artifact.as_ref()))))
 }
 
 #[cfg(test)]

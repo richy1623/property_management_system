@@ -393,6 +393,28 @@
           "user_id": { "type": "integer", "format": "int32", "description": "Unique user ID.", "example": "101" }
         }
       },
+      "ArtifactFile": {
+        "type": "object",
+        "description": "File to be saved to as an artifact",
+        "required": ["file_name", "file_content"],
+        "properties": {
+          "file_content": { "type": "string", "format": "binary", "description": "Raw file contents as base64" },
+          "file_name": {
+            "type": "string",
+            "description": "Display name of the uploaded file",
+            "example": "receipt.pdf"
+          }
+        }
+      },
+      "ArtifactReference": {
+        "type": "object",
+        "description": "Reference object for an artifact (lightweight)",
+        "required": ["artifact_id", "file_display_name"],
+        "properties": {
+          "artifact_id": { "type": "integer", "format": "int32", "example": 5001 },
+          "file_display_name": { "type": "string", "example": "receipt.pdf" }
+        }
+      },
       "CreateUserRequest": {
         "type": "object",
         "description": "Payload to create a new user account.",
@@ -612,6 +634,7 @@
           "last_changed_by_user": { "type": "integer", "format": "int32", "example": 101 },
           "ownership_id": { "type": "integer", "format": "int32", "example": 2001 },
           "payment_id": { "type": "integer", "format": "int32", "example": 1001 },
+          "proof_of_payment": { "oneOf": [{ "type": "null" }, { "$ref": "#/components/schemas/ArtifactReference" }] },
           "reference": { "type": "string", "example": "REF123456" },
           "state": { "$ref": "#/components/schemas/PaymentState" }
         }
@@ -624,6 +647,7 @@
           "amount": { "type": "integer", "format": "int32", "example": 50000 },
           "date": { "type": "string", "format": "date", "example": "2025-06-01" },
           "ownership_id": { "type": "integer", "format": "int32", "example": 2001 },
+          "proof_of_payment_file": { "oneOf": [{ "type": "null" }, { "$ref": "#/components/schemas/ArtifactFile" }] },
           "reference": { "type": "string", "example": "REF123456" },
           "user_creating_payment": { "type": "integer", "format": "int32", "example": 101 }
         }
