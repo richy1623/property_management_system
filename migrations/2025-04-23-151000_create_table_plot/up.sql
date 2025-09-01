@@ -7,7 +7,7 @@ CREATE TABLE
         phase TEXT NOT NULL,
         length INTEGER NOT NULL,
         width INTEGER NOT NULL,
-        CONSTRAINT fk_estate FOREIGN KEY (estate_id) REFERENCES estate (estate_id)
+        CONSTRAINT fk_estate FOREIGN KEY (estate_id) REFERENCES estate (estate_id) ON DELETE CASCADE
     );
 
 -- Create an index on plot_number

@@ -16,8 +16,8 @@ CREATE TABLE
         monthly_repayment_amount INTEGER DEFAULT 0 NOT NULL,
         -- TODO contract_path
         -- contract_path TEXT,
-        CONSTRAINT fk_person FOREIGN KEY (user_id) REFERENCES "user" (user_id),
-        CONSTRAINT fk_plot FOREIGN KEY (plot_id) REFERENCES plot (plot_id)
+        CONSTRAINT fk_person FOREIGN KEY (user_id) REFERENCES "user" (user_id) ON DELETE CASCADE,
+        CONSTRAINT fk_plot FOREIGN KEY (plot_id) REFERENCES plot (plot_id) ON DELETE CASCADE
     );
 
 CREATE INDEX idx__ownership__user_id ON ownership (user_id);
