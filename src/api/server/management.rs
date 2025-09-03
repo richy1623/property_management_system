@@ -5,6 +5,7 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::api::AppServices;
+use crate::api::handler::artifact_handler::get_artifact;
 use crate::api::handler::estate_handler::{create_estate, list_estates};
 use crate::api::handler::ownership_handler::{
     create_ownership, get_ownership, get_ownerships, update_ownership,
@@ -56,6 +57,9 @@ pub fn api_routes(app_services: Arc<AppServices>) -> Scope {
                 .route("/state", web::get().to(get_payments_in_state))
                 .route("/update", web::post().to(update_payment_state)),
         )
+        // Artifact routes
+        .service(web::scope("/artifact").route("/", web::get().to(get_artifact)))
+        // Serve Swagger UI
         .service(
             web::scope("/docs")
                 .service(
@@ -66,13 +70,14 @@ pub fn api_routes(app_services: Arc<AppServices>) -> Scope {
                     web::get().to(|| async { HttpResponse::Ok().json(doc::ApiDoc::openapi()) }),
                 ),
         )
-    // Serve Swagger UI
+    // Note: when adding paths here, add them below to include them in the swagger
 }
 
 pub mod doc {
 
     use crate::api::handler::{
-        estate_handler, ownership_handler, payment_handler, plot_handler, user_handler,
+        artifact_handler, estate_handler, ownership_handler, payment_handler, plot_handler,
+        user_handler,
     };
 
     use utoipa::OpenApi;
@@ -96,11 +101,13 @@ pub mod doc {
         payment_handler::get_payments_for_ownership,
         payment_handler::get_payments_in_state,
         payment_handler::update_payment_state,
+        artifact_handler::get_artifact
     ),
     tags(
         (name = "User Management", description = "Operations related to user authentication and management"),
         (name = "Property Management", description = "Operations related to estates, plots, and ownership"),
-        (name = "Payment Management", description = "Operations related to payment tracking and updates")
+        (name = "Payment Management", description = "Operations related to payment tracking and updates"),
+        (name = "Artifact Management", description = "Operations related to archival of artifacts")
     )
 )]
     pub struct ApiDoc;

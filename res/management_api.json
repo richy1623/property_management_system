@@ -2,6 +2,33 @@
   "openapi": "3.1.0",
   "info": { "title": "Management API", "description": "Management API", "license": { "name": "" }, "version": "0.1.0" },
   "paths": {
+    "/api/artifact/{artifact_id}": {
+      "get": {
+        "tags": ["Artifact Management"],
+        "summary": "Retrieve artifact with a given artifact ID",
+        "description": "Accepts an artifact ID and returns the artifact associated with it.\nAuthorization: bearer token.",
+        "operationId": "get_artifact",
+        "parameters": [
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "description": "Artifact ID to return",
+            "required": true,
+            "schema": { "type": "integer", "format": "int32" },
+            "example": "1001"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The requested artifact",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Artifact" } } }
+          },
+          "400": { "description": "Missing or invalid input" },
+          "401": { "description": "Unauthorized" }
+        },
+        "security": [{ "bearerAuth": [] }]
+      }
+    },
     "/api/estate/create": {
       "post": {
         "tags": ["Property Management"],
@@ -393,6 +420,18 @@
           "user_id": { "type": "integer", "format": "int32", "description": "Unique user ID.", "example": "101" }
         }
       },
+      "Artifact": {
+        "type": "object",
+        "description": "Represents an uploaded artifact with metadata and file content",
+        "required": ["artifact_id", "file_display_name", "upload_date", "uploaded_by", "file_content"],
+        "properties": {
+          "artifact_id": { "type": "integer", "format": "int32", "example": 5001 },
+          "file_content": { "type": "string", "format": "binary", "description": "Binary content of the artifact" },
+          "file_display_name": { "type": "string", "example": "receipt.pdf" },
+          "upload_date": { "type": "string", "format": "date", "example": "2025-06-01" },
+          "uploaded_by": { "type": "integer", "format": "int32", "example": 101 }
+        }
+      },
       "ArtifactFile": {
         "type": "object",
         "description": "File to be saved to as an artifact",
@@ -772,6 +811,7 @@
   "tags": [
     { "name": "User Management", "description": "Operations related to user authentication and management" },
     { "name": "Property Management", "description": "Operations related to estates, plots, and ownership" },
-    { "name": "Payment Management", "description": "Operations related to payment tracking and updates" }
+    { "name": "Payment Management", "description": "Operations related to payment tracking and updates" },
+    { "name": "Artifact Management", "description": "Operations related to archival of artifacts" }
   ]
 }

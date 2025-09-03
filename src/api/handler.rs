@@ -3,6 +3,7 @@ use diesel::{
     r2d2::{ConnectionManager, Pool, PooledConnection},
 };
 
+pub mod artifact_handler;
 pub mod estate_handler;
 pub mod ownership_handler;
 pub mod payment_handler;
