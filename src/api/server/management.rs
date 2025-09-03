@@ -18,6 +18,9 @@ use crate::api::handler::user_handler::{create_user, list_users, login_user};
 pub fn api_routes(app_services: Arc<AppServices>) -> Scope {
     web::scope("/api")
         .app_data(actix_web::web::Data::new(app_services.clone()))
+        .app_data(
+            web::JsonConfig::default().limit(50 * 1024 * 1024), // 50 MB limit
+        )
         // User routes
         .service(
             web::scope("/user")
