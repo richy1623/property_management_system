@@ -11,6 +11,7 @@ use crate::{
         ownership::Ownership as OwnershipModel, user::User as UserModel,
         user_permission::PermissionType,
     },
+    error::Error,
     service::property_management::property_management_proto::property_management_server::PropertyManagement,
 };
 use actix_web::{HttpRequest, HttpResponse, Responder, error::ErrorInternalServerError, web};
@@ -191,10 +192,9 @@ pub async fn get_ownership(
         ));
     }
 
-    Ok(HttpResponse::Ok().json(Ownership::from((
-        ownership,
-        user_making_request.user_name.to_string(),
-    ))))
+    let ownership_user = UserModel::get_user_by_user_id(&mut conn, ownership.user_id)?;
+
+    Ok(HttpResponse::Ok().json(Ownership::from((ownership, ownership_user.user_name))))
 }
 
 /// Get ownership records with optional filters
@@ -281,8 +281,11 @@ pub async fn get_ownerships(
 
     let results: Vec<Ownership> = ownerships
         .into_iter()
-        .map(|ownership| Ownership::from((ownership, user_making_request.user_name.clone())))
-        .collect();
+        .map(|ownership| {
+            let username = UserModel::get_user_by_user_id(&mut conn, ownership.user_id)?.user_name;
+            Ok(Ownership::from((ownership, username)))
+        })
+        .collect::<Result<Vec<Ownership>, Error>>()?;
 
     Ok(HttpResponse::Ok().json(results))
 }
@@ -472,6 +475,8 @@ mod tests {
         )
         .await;
 
+        let user_making_request = crate::db::model::tests::create_test_user(&mut conn);
+
         // Create database entries
         let estate = crate::db::model::tests::create_test_estate(&mut conn);
         let plot = crate::db::model::tests::create_test_plot(&mut conn, &estate);
@@ -480,7 +485,7 @@ mod tests {
 
         // Act: Send http request
         let jwt_token = jwt.encode_jwt_token(
-            ClaimsBuilder::new(&user.user_name)
+            ClaimsBuilder::new(&user_making_request.user_name)
                 .permission(PermissionType::ViewOwnerships.to_string())
                 .build(),
         );
