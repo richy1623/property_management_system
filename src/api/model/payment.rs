@@ -82,7 +82,7 @@ pub struct UpdatePaymentStateRequest {
     pub state: PaymentState,
 
     #[schema(example = "Marked as completed after verification")]
-    pub comment: Option<String>,
+    pub comment: String,
 }
 
 #[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
@@ -142,9 +142,7 @@ mod converter {
                 jwt_token: jwt,
                 payment_id: payment_state_update_request.payment_id,
                 state: payment_state_update_request.state.into(),
-                comment: payment_state_update_request
-                    .comment
-                    .unwrap_or("No comment supplied".to_string()),
+                comment: payment_state_update_request.comment,
             }
         }
     }
@@ -202,7 +200,7 @@ mod converter {
             Self {
                 payment_id: payment_state_update_request.payment_id,
                 state: payment_state_update_request.state.try_into().unwrap(),
-                comment: Some(payment_state_update_request.comment),
+                comment: payment_state_update_request.comment,
             }
         }
     }

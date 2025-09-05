@@ -30,12 +30,11 @@ impl SecureStorage {
         content: &[u8],
         date: NaiveDate,
     ) -> Result<PathBuf, Error> {
-        let dir = self.root_path.join(format!(
-            "{}/{:02}/{:02}",
-            date.year_ce().1,
-            date.month(),
-            date.day()
-        ));
+        let dir = self
+            .root_path
+            .join(format!("{}", date.year_ce().1))
+            .join(format!("{:02}", date.month()))
+            .join(format!("{:02}", date.day()));
         tokio_fs::create_dir_all(&dir).await?;
 
         let nonce = Aes256Gcm::generate_nonce(&mut OsRng);

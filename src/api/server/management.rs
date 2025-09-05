@@ -44,7 +44,7 @@ pub fn api_routes(app_services: Arc<AppServices>) -> Scope {
         // Ownership routes
         .service(
             web::scope("/ownership")
-                .route("/", web::get().to(get_ownership))
+                .route("/{ownership_id}", web::get().to(get_ownership))
                 .route("/create", web::post().to(create_ownership))
                 .route("/update", web::post().to(update_ownership)),
         )
@@ -58,7 +58,7 @@ pub fn api_routes(app_services: Arc<AppServices>) -> Scope {
                 .route("/update", web::post().to(update_payment_state)),
         )
         // Artifact routes
-        .service(web::scope("/artifact").route("/", web::get().to(get_artifact)))
+        .service(web::scope("/artifact").route("/{artifact_id}", web::get().to(get_artifact)))
         // Serve Swagger UI
         .service(
             web::scope("/docs")
