@@ -8,19 +8,21 @@ use crate::{
         },
     },
     db::model::{
-        ownership::Ownership as OwnershipModel, user::User as UserModel,
+        ownership::{Ownership as OwnershipModel, OwnershipState},
+        user::User as UserModel,
         user_permission::PermissionType,
     },
     error::Error,
     service::property_management::property_management_proto::property_management_server::PropertyManagement,
 };
-use actix_web::{HttpRequest, HttpResponse, Responder, error::ErrorInternalServerError, web};
+use actix_web::{
+    HttpRequest, HttpResponse, Responder,
+    error::{ErrorBadRequest, ErrorInternalServerError},
+    web,
+};
 use actix_web::{Result, error::ErrorUnauthorized};
 
-use crate::service::property_management::property_management_proto::{
-    OwnershipCreationRequest as ProtoOwnershipCreationRequest,
-    OwnershipUpdateRequest as ProtoOwnershipUpdateRequest,
-};
+use crate::service::property_management::property_management_proto::OwnershipUpdateRequest as ProtoOwnershipUpdateRequest;
 
 /// Create a new ownership record
 ///
@@ -33,8 +35,8 @@ use crate::service::property_management::property_management_proto::{
     request_body(content = OwnershipCreationRequest, description = "Ownership creation data"),
     responses(
         (status = 201, description = "Ownership created successfully", body = Ownership),
-        (status = 400, description = "Missing or invalid input"),
-        (status = 401, description = "Unauthorized")
+        (status = 400, description = "Missing or invalid input", body = String),
+        (status = 401, description = "Unauthorized", body = String)
     ),
     security(
         ("bearerAuth" = [])
@@ -48,25 +50,64 @@ pub async fn create_ownership(
 ) -> Result<impl Responder> {
     let authorization_header = crate::api::extract_authorization_header(&http_request)?;
 
-    let request = tonic::Request::new(ProtoOwnershipCreationRequest::from((
-        payload.into_inner(),
-        authorization_header,
-    )));
+    let request = payload.into_inner();
 
-    match services
+    let mut conn = super::get_database_connection(
+        services
+            .property_management_service
+            .database_connection_pool
+            .clone(),
+    )?;
+
+    // Validate JWT token
+    let jwt = services
         .property_management_service
-        .create_ownership(request)
-        .await
+        .jwt
+        .decode_jwt_token(&authorization_header)?;
+
+    // Check permission
+    if !jwt
+        .claims
+        .permissions
+        .contains(&PermissionType::ModifyOwnerships.to_string())
     {
-        Ok(response) => {
-            // Convert the successful gRPC response into the HTTP response
-            Ok(HttpResponse::Ok().json(Ownership::from(response.into_inner())))
-        }
-        Err(status) => {
-            // Map the gRPC error status to an appropriate HTTP response with logging
-            Ok(crate::api::map_grpc_error_to_http_response(status))
+        return Err(ErrorUnauthorized(
+            "Insufficient permissions to Modify Ownerships",
+        ));
+    }
+
+    // Only allow a single non Defaulted ownership
+    if request.state != OwnershipState::Defaulted {
+        let ownerships_for_plot =
+            OwnershipModel::get_ownerships_filtered(&mut conn, None, Some(request.plot_id), None)?;
+        if ownerships_for_plot
+            .iter()
+            .any(|ownership| ownership.state != OwnershipState::Defaulted)
+        {
+            return Err(ErrorBadRequest(
+                "Attempting to create multiple active Ownership records",
+            ));
         }
     }
+
+    // Create ownership in DB
+    let ownership = OwnershipModel::create_ownership(
+        &mut conn,
+        request.user_id,
+        request.plot_id,
+        request
+            .state
+            .clone()
+            .try_into()
+            .map_err(|_e| ErrorBadRequest(format!("Invalid state: {:?}", request.state)))?,
+        request.total_sale_value,
+        request.monthly_repayment_amount,
+    )?;
+
+    // Fetch the user to get username
+    let user = UserModel::get_user_by_user_id(&mut conn, request.user_id)?;
+
+    Ok(HttpResponse::Ok().json(Ownership::from((ownership, user.user_name))))
 }
 
 /// Update an existing ownership record
