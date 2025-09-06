@@ -46,7 +46,7 @@ pub fn api_routes(app_services: Arc<AppServices>) -> Scope {
             web::scope("/ownership")
                 .route("/{ownership_id}", web::get().to(get_ownership))
                 .route("/create", web::post().to(create_ownership))
-                .route("/update", web::post().to(update_ownership)),
+                .route("/update", web::put().to(update_ownership)),
         )
         .service(web::scope("/ownerships").route("", web::get().to(get_ownerships)))
         // Payment routes

@@ -400,7 +400,7 @@ mod tests {
         let app = test::init_service(
             App::new()
                 .app_data(actix_web::web::Data::new(app_services.clone()))
-                .route("/api/ownership/update", web::post().to(update_ownership)),
+                .route("/api/ownership/update", web::put().to(update_ownership)),
         )
         .await;
 
@@ -425,7 +425,7 @@ mod tests {
                 .build(),
         );
 
-        let req = test::TestRequest::post()
+        let req = test::TestRequest::put()
             .uri("/api/ownership/update")
             .insert_header(("Authorization", format!("Bearer {jwt_token}")))
             .insert_header(("Content-Type", "application/json"))
