@@ -105,7 +105,7 @@ pub mod tests {
         UserPermission::set_user_permission(
             conn,
             user.user_id,
-            vec![
+            &vec![
                 PermissionType::Employee,
                 PermissionType::ViewPayments,
                 PermissionType::ModifyPayments,

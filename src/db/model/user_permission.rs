@@ -28,7 +28,7 @@ pub enum PermissionType {
 }
 
 #[derive(
-    Queryable, Selectable, Insertable, Debug, PartialEq, Eq, Clone, Serialize, Deserialize,
+    Queryable, Selectable, Insertable, Debug, PartialEq, Eq, Clone, Serialize, Deserialize, ToSchema,
 )]
 #[diesel(table_name = user_permission)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
@@ -41,7 +41,7 @@ impl UserPermission {
     pub fn set_user_permission(
         conn: &mut PgConnection,
         user_id: i32,
-        permissions: Vec<PermissionType>,
+        permissions: &Vec<PermissionType>,
     ) -> Result<Vec<PermissionType>, Error> {
         UserPermission::remove_all_user_permission(conn, user_id)?;
 
@@ -115,7 +115,7 @@ mod tests {
         let user_permission = UserPermission::set_user_permission(
             &mut conn,
             user.user_id,
-            vec![PermissionType::ViewPayments, PermissionType::ModifyPayments],
+            &vec![PermissionType::ViewPayments, PermissionType::ModifyPayments],
         )
         .unwrap();
 
@@ -127,7 +127,7 @@ mod tests {
         let user_permission = UserPermission::set_user_permission(
             &mut conn,
             user.user_id,
-            vec![PermissionType::ViewPayments, PermissionType::ModifyUsers],
+            &vec![PermissionType::ViewPayments, PermissionType::ModifyUsers],
         )
         .unwrap();
         assert_eq!(

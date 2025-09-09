@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
+use crate::db::model::user_permission::PermissionType;
+
 /// Login credentials used to authenticate a user.
 #[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
 pub struct LoginRequest {
@@ -79,6 +81,10 @@ pub struct User {
     /// Optional ID number.
     #[schema(example = "ID123456789")]
     pub identification_number: Option<String>,
+
+    /// List of user permissions
+    #[schema(example = "[ViewPayments, ModifyProperties]")]
+    pub permissions: Vec<PermissionType>,
 }
 
 /// Parameters to filter users in list query.
@@ -107,10 +113,27 @@ pub struct ListUsersRequest {
 
 mod converter {
     use super::*;
-    use crate::service::user_management::user_management_proto::{
-        ListUsersRequest as ProtoListUsersRequest, User as ProtoUser, UserCreationRequest,
-        UserLoginRequest, UserLoginResponse,
+    use crate::{
+        db::model::user::User as UserModel,
+        service::user_management::user_management_proto::{
+            ListUsersRequest as ProtoListUsersRequest, User as ProtoUser, UserCreationRequest,
+            UserLoginRequest, UserLoginResponse,
+        },
     };
+
+    impl From<(UserModel, Vec<PermissionType>)> for User {
+        fn from(value: (UserModel, Vec<PermissionType>)) -> Self {
+            User {
+                user_id: value.0.user_id,
+                username: value.0.user_name,
+                name: value.0.name,
+                cellphone_number: value.0.cellphone_number,
+                email_address: value.0.email_address,
+                identification_number: value.0.identification_number,
+                permissions: value.1,
+            }
+        }
+    }
 
     impl From<LoginRequest> for UserLoginRequest {
         fn from(login_request: LoginRequest) -> Self {
@@ -139,6 +162,7 @@ mod converter {
                 cellphone_number: user.cellphone_number,
                 email_address: user.email_address,
                 identification_number: user.identification_number,
+                permissions: Vec::new(),
             }
         }
     }
