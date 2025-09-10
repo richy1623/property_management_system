@@ -107,8 +107,11 @@
             "description": "Ownership created successfully",
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Ownership" } } }
           },
-          "400": { "description": "Missing or invalid input" },
-          "401": { "description": "Unauthorized" }
+          "400": {
+            "description": "Missing or invalid input",
+            "content": { "text/plain": { "schema": { "type": "string" } } }
+          },
+          "401": { "description": "Unauthorized", "content": { "text/plain": { "schema": { "type": "string" } } } }
         },
         "security": [{ "bearerAuth": [] }]
       }
@@ -402,6 +405,65 @@
           "400": { "description": "Missing or invalid input" },
           "401": { "description": "Unauthorized" }
         }
+      }
+    },
+    "/api/user/{user_id}": {
+      "get": {
+        "tags": ["User Management"],
+        "summary": "Get user details and permissions",
+        "description": "Returns the user info along with their permissions.\nAuthorization: bearer token.",
+        "operationId": "get_user_details",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "ID of the user to fetch details for",
+            "required": true,
+            "schema": { "type": "integer", "format": "int32" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User details retrieved successfully",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } }
+          },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "User not found" }
+        },
+        "security": [{ "bearerAuth": [] }]
+      }
+    },
+    "/api/user/{user_id}/permissions": {
+      "put": {
+        "tags": ["User Management"],
+        "summary": "Update a user’s permissions",
+        "description": "Replaces the existing permissions for the given user with the new set.\nAuthorization: bearer token.",
+        "operationId": "update_user_permissions",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "ID of the user to update permissions for",
+            "required": true,
+            "schema": { "type": "integer", "format": "int32" }
+          }
+        ],
+        "requestBody": {
+          "description": "New permissions for the user",
+          "content": {
+            "application/json": {
+              "schema": { "type": "array", "items": { "$ref": "#/components/schemas/UserPermission" } }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": { "description": "User permissions updated successfully" },
+          "400": { "description": "Invalid input" },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "User not found" }
+        },
+        "security": [{ "bearerAuth": [] }]
       }
     }
   },
@@ -698,6 +760,21 @@
         "properties": { "payments": { "type": "array", "items": { "$ref": "#/components/schemas/Payment" } } }
       },
       "PaymentState": { "type": "string", "enum": ["PendingApproval", "Approved", "Rejected"] },
+      "PermissionType": {
+        "type": "string",
+        "enum": [
+          "Employee",
+          "ViewPayments",
+          "ModifyPayments",
+          "ViewUsers",
+          "ModifyUsers",
+          "ViewProperties",
+          "ModifyProperties",
+          "ViewOwnerships",
+          "ModifyOwnerships",
+          "ViewReports"
+        ]
+      },
       "Plot": {
         "type": "object",
         "description": "Represents a plot of land within an estate.",
@@ -773,9 +850,9 @@
       "UpdatePaymentStateRequest": {
         "type": "object",
         "description": "Request to update payment state with optional comment.",
-        "required": ["payment_id", "state"],
+        "required": ["payment_id", "state", "comment"],
         "properties": {
-          "comment": { "type": ["string", "null"], "example": "Marked as completed after verification" },
+          "comment": { "type": "string", "example": "Marked as completed after verification" },
           "payment_id": { "type": "integer", "format": "int32", "example": 1001 },
           "state": { "$ref": "#/components/schemas/PaymentState" }
         }
@@ -783,7 +860,7 @@
       "User": {
         "type": "object",
         "description": "A fully populated user as stored in the database.",
-        "required": ["user_id", "username", "name"],
+        "required": ["user_id", "username", "name", "permissions"],
         "properties": {
           "cellphone_number": {
             "type": ["string", "null"],
@@ -802,8 +879,22 @@
             "example": "ID123456789"
           },
           "name": { "type": "string", "description": "Full name.", "example": "John Doe" },
+          "permissions": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PermissionType" },
+            "description": "List of user permissions",
+            "example": "[ViewPayments, ModifyProperties]"
+          },
           "user_id": { "type": "integer", "format": "int32", "description": "Unique user ID.", "example": 101 },
           "username": { "type": "string", "description": "The username.", "example": "john_doe" }
+        }
+      },
+      "UserPermission": {
+        "type": "object",
+        "required": ["user_id", "permission"],
+        "properties": {
+          "permission": { "$ref": "#/components/schemas/PermissionType" },
+          "user_id": { "type": "integer", "format": "int32" }
         }
       }
     }
