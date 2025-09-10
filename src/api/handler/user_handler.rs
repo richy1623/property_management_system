@@ -4,6 +4,7 @@ use actix_web::Result;
 use actix_web::error::ErrorUnauthorized;
 use actix_web::{HttpRequest, HttpResponse, Responder, web};
 
+use crate::api::model::user::UpdateUserRequest;
 use crate::db::model::user::User as UserModel;
 use crate::db::model::user_permission::{PermissionType, UserPermission};
 use crate::{
@@ -67,7 +68,7 @@ pub async fn login_user(
 /// Authorization: bearer token.
 #[utoipa::path(
     post,
-    path = "/api/login/create",
+    path = "/api/user/create",
     request_body(content = CreateUserRequest, description = "User creation details"),
     responses(
         (status = 201, description = "User created successfully", body = User),
@@ -204,38 +205,36 @@ pub async fn get_user_details(
     Ok(HttpResponse::Ok().json(User::from((user, user_permissions))))
 }
 
-/// Update a user’s permissions
+/// Update user details and permissions
 ///
-/// Replaces the existing permissions for the given user with the new set.
+/// Returns the user info along with their permissions.
 /// Authorization: bearer token.
 #[utoipa::path(
-    put,
-    path = "/api/user/{user_id}/permissions",
-    request_body(content = Vec<UserPermission>, description = "New permissions for the user"),
+    get,
+    path = "/api/user/{user_id}",
     responses(
-        (status = 200, description = "User permissions updated successfully"),
-        (status = 400, description = "Invalid input"),
+        (status = 200, description = "User details updated successfully", body = User),
         (status = 401, description = "Unauthorized"),
         (status = 404, description = "User not found")
     ),
     params(
-        ("user_id" = i32, Path, description = "ID of the user to update permissions for")
+        ("user_id" = i32, Path, description = "ID of the user to update details for")
     ),
     security(
         ("bearerAuth" = [])
     ),
     tag = "User Management"
 )]
-pub async fn update_user_permissions(
+pub async fn update_user_details(
     services: web::Data<Arc<AppServices>>,
     http_request: HttpRequest,
     path: web::Path<i32>,
-    payload: web::Json<Vec<PermissionType>>,
+    payload: web::Json<UpdateUserRequest>,
 ) -> Result<impl Responder> {
     let user_id = path.into_inner();
-    let new_permissions = &payload.into_inner();
-
     let authorization_header = crate::api::extract_authorization_header(&http_request)?;
+
+    let update_user_request: UpdateUserRequest = payload.into_inner();
 
     let mut conn = super::get_database_connection(
         services
@@ -244,16 +243,12 @@ pub async fn update_user_permissions(
             .clone(),
     )?;
 
-    let user = UserModel::get_user_by_user_id(&mut conn, user_id)?;
-    let _user_permissions = UserPermission::get_all_user_permissions(&mut conn, user_id)?;
-
     // Validate JWT
     let jwt_token = services
         .user_management_service
         .jwt
         .decode_jwt_token(&authorization_header)?;
 
-    // TODO add more logic around who can do what
     if !jwt_token
         .claims
         .permissions
@@ -264,10 +259,99 @@ pub async fn update_user_permissions(
         ));
     }
 
-    let new_permissions = UserPermission::set_user_permission(&mut conn, user_id, new_permissions)?;
+    let updated_user = UserModel::update_user(
+        &mut conn,
+        update_user_request.user_id,
+        update_user_request.user_name.as_deref(),
+        update_user_request.name.as_deref(),
+        update_user_request
+            .cellphone_number
+            .as_ref()
+            .map(Option::as_deref),
+        update_user_request
+            .email_address
+            .as_ref()
+            .map(Option::as_deref),
+        update_user_request
+            .identification_number
+            .as_ref()
+            .map(Option::as_deref),
+        update_user_request.password.as_deref(),
+    )?;
 
-    Ok(HttpResponse::Ok().json(User::from((user, new_permissions))))
+    let user_permissions = if let Some(permissions) = update_user_request.permissions {
+        UserPermission::set_user_permission(&mut conn, user_id, &permissions)?
+    } else {
+        UserPermission::get_all_user_permissions(&mut conn, user_id)?
+    };
+
+    Ok(HttpResponse::Ok().json(User::from((updated_user, user_permissions))))
 }
+
+// /// Update a user’s permissions
+// ///
+// /// Replaces the existing permissions for the given user with the new set.
+// /// Authorization: bearer token.
+// #[utoipa::path(
+//     put,
+//     path = "/api/user/{user_id}/permissions",
+//     request_body(content = Vec<PermissionType>, description = "New permissions for the user"),
+//     responses(
+//         (status = 200, description = "User permissions updated successfully"),
+//         (status = 400, description = "Invalid input"),
+//         (status = 401, description = "Unauthorized"),
+//         (status = 404, description = "User not found")
+//     ),
+//     params(
+//         ("user_id" = i32, Path, description = "ID of the user to update permissions for")
+//     ),
+//     security(
+//         ("bearerAuth" = [])
+//     ),
+//     tag = "User Management"
+// )]
+// pub async fn update_user_permissions(
+//     services: web::Data<Arc<AppServices>>,
+//     http_request: HttpRequest,
+//     path: web::Path<i32>,
+//     payload: web::Json<Vec<PermissionType>>,
+// ) -> Result<impl Responder> {
+//     let user_id = path.into_inner();
+//     let new_permissions = &payload.into_inner();
+
+//     let authorization_header = crate::api::extract_authorization_header(&http_request)?;
+
+//     let mut conn = super::get_database_connection(
+//         services
+//             .archive_management_service
+//             .database_connection_pool
+//             .clone(),
+//     )?;
+
+//     let user = UserModel::get_user_by_user_id(&mut conn, user_id)?;
+//     let _user_permissions = UserPermission::get_all_user_permissions(&mut conn, user_id)?;
+
+//     // Validate JWT
+//     let jwt_token = services
+//         .user_management_service
+//         .jwt
+//         .decode_jwt_token(&authorization_header)?;
+
+//     // TODO add more logic around who can do what
+//     if !jwt_token
+//         .claims
+//         .permissions
+//         .contains(&PermissionType::ModifyUsers.to_string())
+//     {
+//         return Err(ErrorUnauthorized(
+//             "Insufficient permissions to Modify Users",
+//         ));
+//     }
+
+//     let new_permissions = UserPermission::set_user_permission(&mut conn, user_id, new_permissions)?;
+
+//     Ok(HttpResponse::Ok().json(User::from((user, new_permissions))))
+// }
 
 #[cfg(test)]
 mod tests {
@@ -323,9 +407,16 @@ mod tests {
         )
         .await;
 
-        let test_user =
-            UserModel::create_user(&mut conn, "john_doe", "name", None, None, None, "secret123")
-                .unwrap();
+        let test_user = UserModel::create_user(
+            &mut conn,
+            "john_doe_test_login",
+            "name",
+            None,
+            None,
+            None,
+            "secret123",
+        )
+        .unwrap();
 
         // Act: Send a login request with known test user credentials
         let json_payload =
@@ -399,6 +490,87 @@ mod tests {
             response_json.identification_number
         );
         assert_eq!(inserted_user.email_address, response_json.email_address);
+    }
+
+    #[rstest]
+    #[actix_web::test]
+    async fn test_update_user_details_success(
+        test_services: &(
+            AppServices,
+            Jwt,
+            SecureStorage,
+            Pool<ConnectionManager<PgConnection>>,
+        ),
+    ) {
+        let (services, jwt, _secure_storage, pool) = test_services.clone();
+        let mut conn = pool.get().unwrap();
+        let app_services = Arc::new(services);
+
+        // Initialize Actix app with the update_user_details route
+        let app = test::init_service(
+            App::new()
+                .app_data(actix_web::web::Data::new(app_services.clone()))
+                .route("/api/user/{user_id}", web::put().to(update_user_details)),
+        )
+        .await;
+
+        // Create calling user (with permission to update)
+        let calling_user = db::model::tests::create_test_user(&mut conn);
+
+        // Create test user to update
+        let test_user = UserModel::create_user(
+            &mut conn,
+            "john_doe",
+            "John Doe",
+            None,
+            Some("john@example.com"),
+            None,
+            "secret123",
+        )
+        .unwrap();
+
+        // Build JWT for the calling user
+        let jwt_token = jwt.encode_jwt_token(
+            ClaimsBuilder::new(&calling_user.user_name)
+                .permission(PermissionType::ModifyUsers.to_string())
+                .build(),
+        );
+
+        // Load update payload from test resources
+        let json_payload = fs::read_to_string(
+            "tests/resources/api/payload/user_management/request/update_user.json",
+        )
+        .expect("Failed to read JSON file");
+        let json_payload = json_payload.replace("\"{{user_id}}\"", &test_user.user_id.to_string());
+
+        // Act: send PUT request
+        let req = test::TestRequest::put()
+            .uri(&format!("/api/user/{}", test_user.user_id))
+            .insert_header(("Authorization", format!("Bearer {jwt_token}")))
+            .insert_header(("Content-Type", "application/json"))
+            .set_payload(json_payload)
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+
+        // Assert
+        assert_eq!(resp.status(), 200);
+        let response_json: User = test::read_body_json(resp).await;
+        assert_eq!(response_json.user_id, test_user.user_id);
+        assert_eq!(response_json.username, "john_doe_update");
+        assert_eq!(response_json.name, "John Doe Update");
+        assert_eq!(
+            response_json.email_address,
+            Some("john_update@example.com".to_string())
+        );
+
+        assert_eq!(
+            UserPermission::get_all_user_permissions(&mut conn, test_user.user_id).unwrap(),
+            vec![
+                PermissionType::ViewPayments,
+                PermissionType::ModifyOwnerships
+            ]
+        );
     }
 
     #[rstest]
@@ -541,70 +713,70 @@ mod tests {
         assert_eq!(response_json.permissions, permissions);
     }
 
-    #[rstest]
-    #[actix_web::test]
-    async fn test_update_user_permissions_success(
-        test_services: &(
-            AppServices,
-            Jwt,
-            SecureStorage,
-            Pool<ConnectionManager<PgConnection>>,
-        ),
-    ) {
-        let (services, jwt, _secure_storage, pool) = test_services.clone();
-        let mut conn = pool.get().unwrap();
-        let app_services = Arc::new(services);
+    // #[rstest]
+    // #[actix_web::test]
+    // async fn test_update_user_permissions_success(
+    //     test_services: &(
+    //         AppServices,
+    //         Jwt,
+    //         SecureStorage,
+    //         Pool<ConnectionManager<PgConnection>>,
+    //     ),
+    // ) {
+    //     let (services, jwt, _secure_storage, pool) = test_services.clone();
+    //     let mut conn = pool.get().unwrap();
+    //     let app_services = Arc::new(services);
 
-        // Initialize Actix app with the route
-        let app = test::init_service(
-            App::new()
-                .app_data(actix_web::web::Data::new(app_services.clone()))
-                .route(
-                    "/api/user/{user_id}/permissions",
-                    web::put().to(update_user_permissions),
-                ),
-        )
-        .await;
+    //     // Initialize Actix app with the route
+    //     let app = test::init_service(
+    //         App::new()
+    //             .app_data(actix_web::web::Data::new(app_services.clone()))
+    //             .route(
+    //                 "/api/user/{user_id}/permissions",
+    //                 web::put().to(update_user_permissions),
+    //             ),
+    //     )
+    //     .await;
 
-        // Create a calling user in DB
-        let user_making_request = db::model::tests::create_test_user(&mut conn);
+    //     // Create a calling user in DB
+    //     let user_making_request = db::model::tests::create_test_user(&mut conn);
 
-        // Create a test user in DB
-        let test_user = db::model::tests::create_test_user(&mut conn);
+    //     // Create a test user in DB
+    //     let test_user = db::model::tests::create_test_user(&mut conn);
 
-        // Initial permissions (optional, could be empty)
-        let initial_permissions = vec![PermissionType::ViewUsers];
-        UserPermission::set_user_permission(&mut conn, test_user.user_id, &initial_permissions)
-            .unwrap();
+    //     // Initial permissions (optional, could be empty)
+    //     let initial_permissions = vec![PermissionType::ViewUsers];
+    //     UserPermission::set_user_permission(&mut conn, test_user.user_id, &initial_permissions)
+    //         .unwrap();
 
-        // New permissions to update
-        let new_permissions = vec![
-            PermissionType::ViewPayments,
-            PermissionType::ModifyOwnerships,
-        ];
+    //     // New permissions to update
+    //     let new_permissions = vec![
+    //         PermissionType::ViewPayments,
+    //         PermissionType::ModifyOwnerships,
+    //     ];
 
-        // Encode JWT for the calling user
-        let jwt_token = jwt.encode_jwt_token(
-            ClaimsBuilder::new(&user_making_request.user_name)
-                .permission(PermissionType::ModifyUsers.to_string()) // assume this allows updates
-                .build(),
-        );
+    //     // Encode JWT for the calling user
+    //     let jwt_token = jwt.encode_jwt_token(
+    //         ClaimsBuilder::new(&user_making_request.user_name)
+    //             .permission(PermissionType::ModifyUsers.to_string()) // assume this allows updates
+    //             .build(),
+    //     );
 
-        // Send PUT request to update permissions
-        let req = test::TestRequest::put()
-            .uri(&format!("/api/user/{}/permissions", test_user.user_id))
-            .insert_header(("Authorization", format!("Bearer {jwt_token}")))
-            .set_json(&new_permissions)
-            .to_request();
+    //     // Send PUT request to update permissions
+    //     let req = test::TestRequest::put()
+    //         .uri(&format!("/api/user/{}/permissions", test_user.user_id))
+    //         .insert_header(("Authorization", format!("Bearer {jwt_token}")))
+    //         .set_json(&new_permissions)
+    //         .to_request();
 
-        let resp = test::call_service(&app, req).await;
+    //     let resp = test::call_service(&app, req).await;
 
-        // Assert HTTP status
-        assert_eq!(resp.status(), 200);
+    //     // Assert HTTP status
+    //     assert_eq!(resp.status(), 200);
 
-        // Verify in DB that permissions were updated
-        let db_permissions =
-            UserPermission::get_all_user_permissions(&mut conn, test_user.user_id).unwrap();
-        assert_eq!(db_permissions, new_permissions);
-    }
+    //     // Verify in DB that permissions were updated
+    //     let db_permissions =
+    //         UserPermission::get_all_user_permissions(&mut conn, test_user.user_id).unwrap();
+    //     assert_eq!(db_permissions, new_permissions);
+    // }
 }

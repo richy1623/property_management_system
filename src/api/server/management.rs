@@ -15,7 +15,7 @@ use crate::api::handler::payment_handler::{
 };
 use crate::api::handler::plot_handler::{create_plot, list_plots};
 use crate::api::handler::user_handler::{
-    create_user, get_user_details, list_users, login_user, update_user_permissions,
+    create_user, get_user_details, list_users, login_user, update_user_details,
 };
 
 pub fn api_routes(app_services: Arc<AppServices>) -> Scope {
@@ -31,10 +31,7 @@ pub fn api_routes(app_services: Arc<AppServices>) -> Scope {
                 .route("/create", web::post().to(create_user))
                 .route("/list", web::post().to(list_users))
                 .route("/{user_id}", web::get().to(get_user_details))
-                .route(
-                    "/{user_id}/permissions",
-                    web::put().to(update_user_permissions),
-                ),
+                .route("/{user_id}", web::put().to(update_user_details)),
         )
         // Estate routes
         .service(
@@ -97,7 +94,7 @@ pub mod doc {
         user_handler::create_user,
         user_handler::list_users,
         user_handler::get_user_details,
-        user_handler::update_user_permissions,
+        user_handler::update_user_details,
         estate_handler::create_estate,
         estate_handler::list_estates,
         plot_handler::create_plot,

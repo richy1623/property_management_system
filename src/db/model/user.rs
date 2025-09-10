@@ -2,7 +2,7 @@ use argon2::{
     Argon2, Params,
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
 };
-use diesel::{insert_into, prelude::*};
+use diesel::{insert_into, prelude::*, update};
 use once_cell::sync::Lazy;
 use rand_core::OsRng;
 use serde::{Deserialize, Serialize};
@@ -37,6 +37,18 @@ pub struct User {
     pub password_hash: String,
 }
 
+#[derive(AsChangeset)]
+#[diesel(table_name = user)]
+struct UpdateUser<'a> {
+    // user_id: i32,
+    user_name: Option<&'a str>,
+    name: Option<&'a str>,
+    cellphone_number: Option<Option<&'a str>>,
+    email_address: Option<Option<&'a str>>,
+    identification_number: Option<Option<&'a str>>,
+    password_hash: Option<&'a str>,
+}
+
 impl User {
     pub fn create_user(
         conn: &mut PgConnection,
@@ -57,6 +69,36 @@ impl User {
                 user::password_hash.eq(User::hash_password(&password)
                     .map_err(|error| Error::InternalError(error.to_string()))?),
             ))
+            .get_result(conn)
+            .map_err(Into::into)
+    }
+
+    pub fn update_user(
+        conn: &mut PgConnection,
+        user_id: i32,
+        user_name: Option<&str>,
+        name: Option<&str>,
+        cellphone_number: Option<Option<&str>>,
+        email_address: Option<Option<&str>>,
+        identification_number: Option<Option<&str>>,
+        password: Option<&str>,
+    ) -> Result<User, Error> {
+        let password_hash = if let Some(password) = password {
+            Some(User::hash_password(password).map_err(Into::<Error>::into)?)
+        } else {
+            None
+        };
+        update(user::table)
+            .filter(user::user_id.eq(user_id))
+            .set(UpdateUser {
+                // user_id,
+                user_name,
+                name,
+                cellphone_number,
+                email_address,
+                identification_number,
+                password_hash: password_hash.as_deref(),
+            })
             .get_result(conn)
             .map_err(Into::into)
     }
@@ -173,6 +215,7 @@ mod tests {
         assert_eq!(user.cellphone_number, Some("0721234567".to_string()));
         assert_eq!(user.email_address, Some("email@noreply.com".to_string()));
         assert_eq!(user.identification_number, Some("id_number".to_string()));
+        User::validate_login(&mut conn, "user_1", "password").unwrap();
 
         let user_duplicate = User::create_user(
             &mut conn,
@@ -185,6 +228,78 @@ mod tests {
         );
 
         assert!(user_duplicate.is_err())
+    }
+
+    #[rstest]
+    fn test_update_user(pool: &Pool<ConnectionManager<PgConnection>>) {
+        let mut conn = pool.clone().get().unwrap();
+
+        let user = User::create_user(
+            &mut conn,
+            "user_to_update",
+            "name",
+            Some("0721234567"),
+            Some("email@noreply.com"),
+            Some("id_number"),
+            "password",
+        )
+        .unwrap();
+
+        let new_user = User::update_user(
+            &mut conn,
+            user.user_id,
+            Some("new_username"),
+            Some("new_name"),
+            Some(Some("0000")),
+            Some(Some("new_email@noreply.com")),
+            Some(Some("new_id_number")),
+            Some("new_password"),
+        )
+        .unwrap();
+
+        assert_eq!(new_user.name, "new_name");
+        assert_eq!(new_user.user_name, "new_username");
+        assert_eq!(new_user.cellphone_number, Some("0000".to_string()));
+        assert_eq!(
+            new_user.email_address,
+            Some("new_email@noreply.com".to_string())
+        );
+        assert_eq!(
+            new_user.identification_number,
+            Some("new_id_number".to_string())
+        );
+        assert_eq!(
+            new_user,
+            User::validate_login(&mut conn, "new_username", "new_password").unwrap()
+        );
+
+        let second_update = User::update_user(
+            &mut conn,
+            user.user_id,
+            None,
+            Some("new_name_2"),
+            Some(None),
+            None,
+            Some(Some("new_id_number_2")),
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(second_update.name, "new_name_2");
+        assert_eq!(second_update.user_name, "new_username");
+        assert_eq!(second_update.cellphone_number, None);
+        assert_eq!(
+            second_update.email_address,
+            Some("new_email@noreply.com".to_string())
+        );
+        assert_eq!(
+            second_update.identification_number,
+            Some("new_id_number_2".to_string())
+        );
+        assert_eq!(
+            second_update,
+            User::validate_login(&mut conn, "new_username", "new_password").unwrap()
+        );
     }
 
     #[rstest]

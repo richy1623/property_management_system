@@ -55,6 +55,42 @@ pub struct CreateUserRequest {
     pub password: String,
 }
 
+/// Payload to create a new user account.
+#[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
+pub struct UpdateUserRequest {
+    /// Unique user ID to update.
+    #[schema(example = 101)]
+    pub user_id: i32,
+
+    /// Unique username for the user.
+    #[schema(example = "john_doe")]
+    pub user_name: Option<String>,
+
+    /// Full name of the user.
+    #[schema(example = "John Doe")]
+    pub name: Option<String>,
+
+    /// Optional cellphone number.
+    #[schema(example = "+1234567890")]
+    pub cellphone_number: Option<Option<String>>,
+
+    /// Optional email address.
+    #[schema(example = "john@example.com", format = "email")]
+    pub email_address: Option<Option<String>>,
+
+    /// Optional national ID or identification number.
+    #[schema(example = "ID123456789")]
+    pub identification_number: Option<Option<String>>,
+
+    /// Password for the account.
+    #[schema(example = "secret123", format = "password")]
+    pub password: Option<String>,
+
+    /// List of user permissions to grant
+    #[schema(example = "[ViewPayments, ModifyProperties]")]
+    pub permissions: Option<Vec<PermissionType>>,
+}
+
 /// A fully populated user as stored in the database.
 #[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
 pub struct User {

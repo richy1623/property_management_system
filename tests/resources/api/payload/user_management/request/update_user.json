@@ -1,0 +1,10 @@
+{
+  "user_id": "{{user_id}}",
+  "user_name": "john_doe_update",
+  "name": "John Doe Update",
+  "cellphone_number": "+1234567890",
+  "email_address": "john_update@example.com",
+  "identification_number": "ID123456789U",
+  "password": "secret123update",
+  "permissions": ["ViewPayments", "ModifyOwnerships"]
+}
