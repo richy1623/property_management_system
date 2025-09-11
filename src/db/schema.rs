@@ -101,6 +101,7 @@ diesel::table! {
         email_address -> Nullable<Text>,
         identification_number -> Nullable<Text>,
         password_hash -> Text,
+        is_employee -> Bool,
     }
 }
 

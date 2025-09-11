@@ -89,6 +89,10 @@ pub struct UpdateUserRequest {
     /// List of user permissions to grant
     #[schema(example = "[ViewPayments, ModifyProperties]")]
     pub permissions: Option<Vec<PermissionType>>,
+
+    ///If the user is an employee
+    #[schema(example = "false")]
+    pub is_employee: Option<bool>,
 }
 
 /// A fully populated user as stored in the database.
@@ -121,6 +125,10 @@ pub struct User {
     /// List of user permissions
     #[schema(example = "[ViewPayments, ModifyProperties]")]
     pub permissions: Vec<PermissionType>,
+
+    /// If user is an employee
+    #[schema(example = "false")]
+    pub is_employee: bool,
 }
 
 /// Parameters to filter users in list query.
@@ -167,6 +175,7 @@ mod converter {
                 email_address: value.0.email_address,
                 identification_number: value.0.identification_number,
                 permissions: value.1,
+                is_employee: value.0.is_employee,
             }
         }
     }
@@ -199,6 +208,7 @@ mod converter {
                 email_address: user.email_address,
                 identification_number: user.identification_number,
                 permissions: Vec::new(),
+                is_employee: false,
             }
         }
     }

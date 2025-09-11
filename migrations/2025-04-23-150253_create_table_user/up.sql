@@ -7,5 +7,6 @@ CREATE TABLE
         cellphone_number TEXT,
         email_address TEXT,
         identification_number TEXT,
-        password_hash TEXT NOT NULL
+        password_hash TEXT NOT NULL,
+        is_employee BOOLEAN NOT NULL DEFAULT FALSE
     );

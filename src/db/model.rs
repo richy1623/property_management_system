@@ -32,6 +32,7 @@ pub mod tests {
             Some("email@noreply.com"),
             Some("id_number"),
             "password",
+            false,
         )
         .unwrap()
     }

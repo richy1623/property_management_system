@@ -6,5 +6,6 @@
   "email_address": "john_update@example.com",
   "identification_number": "ID123456789U",
   "password": "secret123update",
-  "permissions": ["ViewPayments", "ModifyOwnerships"]
+  "permissions": ["ViewPayments", "ModifyOwnerships"],
+  "is_employee": true
 }

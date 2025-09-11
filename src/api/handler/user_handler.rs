@@ -210,7 +210,7 @@ pub async fn get_user_details(
 /// Returns the user info along with their permissions.
 /// Authorization: bearer token.
 #[utoipa::path(
-    get,
+    put,
     path = "/api/user/{user_id}",
     responses(
         (status = 200, description = "User details updated successfully", body = User),
@@ -277,6 +277,7 @@ pub async fn update_user_details(
             .as_ref()
             .map(Option::as_deref),
         update_user_request.password.as_deref(),
+        update_user_request.is_employee,
     )?;
 
     let user_permissions = if let Some(permissions) = update_user_request.permissions {
@@ -415,6 +416,7 @@ mod tests {
             None,
             None,
             "secret123",
+            false,
         )
         .unwrap();
 
@@ -526,6 +528,7 @@ mod tests {
             Some("john@example.com"),
             None,
             "secret123",
+            false,
         )
         .unwrap();
 
@@ -563,6 +566,7 @@ mod tests {
             response_json.email_address,
             Some("john_update@example.com".to_string())
         );
+        assert!(response_json.is_employee);
 
         assert_eq!(
             UserPermission::get_all_user_permissions(&mut conn, test_user.user_id).unwrap(),
@@ -603,6 +607,7 @@ mod tests {
             Some("alice@mail.com"),
             Some("ID123"),
             "password",
+            false,
         )
         .unwrap();
         let user_2: UserModel = UserModel::create_user(
@@ -613,6 +618,7 @@ mod tests {
             Some("bob@mail.com"),
             Some("ID456"),
             "password",
+            false,
         )
         .unwrap();
 

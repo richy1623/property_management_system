@@ -52,6 +52,7 @@ impl UserManagement for UserManagementService {
             request.email_address.as_deref(),
             request.identification_number.as_deref(),
             &request.password,
+            false, //TODO this should look at supplied parameter
         )?;
 
         Ok(Response::new((&user).into()))
@@ -201,6 +202,7 @@ mod tests {
             Some("bob@example.com"),
             Some("ID654321"),
             "my_password",
+            false,
         )
         .unwrap();
 
@@ -234,6 +236,7 @@ mod tests {
             None,
             None,
             "right_password",
+            false,
         )
         .unwrap();
 
@@ -271,6 +274,7 @@ mod tests {
             Some("alice@mail.com"),
             Some("ID123"),
             "password",
+            false,
         )
         .unwrap())
             .into();
@@ -282,6 +286,7 @@ mod tests {
             Some("bob@mail.com"),
             Some("ID456"),
             "password",
+            false,
         )
         .unwrap())
             .into();

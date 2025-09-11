@@ -431,6 +431,34 @@
           "404": { "description": "User not found" }
         },
         "security": [{ "bearerAuth": [] }]
+      },
+      "put": {
+        "tags": ["User Management"],
+        "summary": "Update user details and permissions",
+        "description": "Returns the user info along with their permissions.\nAuthorization: bearer token.",
+        "operationId": "update_user_details",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "ID of the user to update details for",
+            "required": true,
+            "schema": { "type": "integer", "format": "int32" }
+          }
+        ],
+        "requestBody": {
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateUserRequest" } } },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "User details updated successfully",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } }
+          },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "User not found" }
+        },
+        "security": [{ "bearerAuth": [] }]
       }
     }
   },
@@ -845,6 +873,11 @@
             "description": "Optional national ID or identification number.",
             "example": "ID123456789"
           },
+          "is_employee": {
+            "type": ["boolean", "null"],
+            "description": "If the user is an employee",
+            "example": "false"
+          },
           "name": { "type": ["string", "null"], "description": "Full name of the user.", "example": "John Doe" },
           "password": {
             "type": ["string", "null"],
@@ -874,7 +907,7 @@
       "User": {
         "type": "object",
         "description": "A fully populated user as stored in the database.",
-        "required": ["user_id", "username", "name", "permissions"],
+        "required": ["user_id", "username", "name", "permissions", "is_employee"],
         "properties": {
           "cellphone_number": {
             "type": ["string", "null"],
@@ -892,6 +925,7 @@
             "description": "Optional ID number.",
             "example": "ID123456789"
           },
+          "is_employee": { "type": "boolean", "description": "If user is an employee", "example": "false" },
           "name": { "type": "string", "description": "Full name.", "example": "John Doe" },
           "permissions": {
             "type": "array",

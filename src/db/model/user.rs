@@ -35,6 +35,7 @@ pub struct User {
     pub email_address: Option<String>,
     pub identification_number: Option<String>,
     pub password_hash: String,
+    pub is_employee: bool,
 }
 
 #[derive(AsChangeset)]
@@ -47,6 +48,7 @@ struct UpdateUser<'a> {
     email_address: Option<Option<&'a str>>,
     identification_number: Option<Option<&'a str>>,
     password_hash: Option<&'a str>,
+    is_employee: Option<bool>,
 }
 
 impl User {
@@ -58,6 +60,7 @@ impl User {
         email_address: Option<&str>,
         identification_number: Option<&str>,
         password: &str,
+        is_employee: bool,
     ) -> Result<User, Error> {
         insert_into(user::table)
             .values((
@@ -68,6 +71,7 @@ impl User {
                 user::identification_number.eq(identification_number),
                 user::password_hash.eq(User::hash_password(&password)
                     .map_err(|error| Error::InternalError(error.to_string()))?),
+                user::is_employee.eq(is_employee),
             ))
             .get_result(conn)
             .map_err(Into::into)
@@ -82,6 +86,7 @@ impl User {
         email_address: Option<Option<&str>>,
         identification_number: Option<Option<&str>>,
         password: Option<&str>,
+        is_employee: Option<bool>,
     ) -> Result<User, Error> {
         let password_hash = if let Some(password) = password {
             Some(User::hash_password(password).map_err(Into::<Error>::into)?)
@@ -98,6 +103,7 @@ impl User {
                 email_address,
                 identification_number,
                 password_hash: password_hash.as_deref(),
+                is_employee,
             })
             .get_result(conn)
             .map_err(Into::into)
@@ -207,6 +213,7 @@ mod tests {
             Some("email@noreply.com"),
             Some("id_number"),
             "password",
+            true,
         )
         .unwrap();
 
@@ -216,6 +223,7 @@ mod tests {
         assert_eq!(user.email_address, Some("email@noreply.com".to_string()));
         assert_eq!(user.identification_number, Some("id_number".to_string()));
         User::validate_login(&mut conn, "user_1", "password").unwrap();
+        assert!(user.is_employee);
 
         let user_duplicate = User::create_user(
             &mut conn,
@@ -225,6 +233,7 @@ mod tests {
             Some("email@noreply.com"),
             Some("id_number"),
             "password",
+            true,
         );
 
         assert!(user_duplicate.is_err())
@@ -242,6 +251,7 @@ mod tests {
             Some("email@noreply.com"),
             Some("id_number"),
             "password",
+            true,
         )
         .unwrap();
 
@@ -254,6 +264,7 @@ mod tests {
             Some(Some("new_email@noreply.com")),
             Some(Some("new_id_number")),
             Some("new_password"),
+            Some(false),
         )
         .unwrap();
 
@@ -272,6 +283,7 @@ mod tests {
             new_user,
             User::validate_login(&mut conn, "new_username", "new_password").unwrap()
         );
+        assert!(!new_user.is_employee);
 
         let second_update = User::update_user(
             &mut conn,
@@ -281,6 +293,7 @@ mod tests {
             Some(None),
             None,
             Some(Some("new_id_number_2")),
+            None,
             None,
         )
         .unwrap();
@@ -300,6 +313,7 @@ mod tests {
             second_update,
             User::validate_login(&mut conn, "new_username", "new_password").unwrap()
         );
+        assert!(!new_user.is_employee);
     }
 
     #[rstest]
@@ -359,6 +373,7 @@ mod tests {
             Some("alice@example.com"),
             Some("ID001"),
             "password",
+            true,
         )
         .unwrap();
 
@@ -370,6 +385,7 @@ mod tests {
             Some("bob@example.com"),
             Some("ID002"),
             "password",
+            true,
         )
         .unwrap();
 
@@ -381,6 +397,7 @@ mod tests {
             Some("carol@example.com"),
             Some("ID003"),
             "password",
+            true,
         )
         .unwrap();
 
