@@ -118,6 +118,7 @@ diesel::table! {
 diesel::joinable!(artifact -> user (uploaded_by));
 diesel::joinable!(ownership -> plot (plot_id));
 diesel::joinable!(ownership -> user (user_id));
+diesel::joinable!(payment -> artifact (proof_of_payment_artifact));
 diesel::joinable!(payment -> ownership (ownership_id));
 diesel::joinable!(payment -> user (last_changed_by_user));
 diesel::joinable!(payment_state_audit -> payment (payment_id));

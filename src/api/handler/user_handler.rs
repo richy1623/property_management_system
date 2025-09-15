@@ -14,9 +14,7 @@ use crate::{
             AccessTokenResponse, CreateUserRequest, ListUsersRequest, LoginRequest, User,
         },
     },
-    service::user_management::user_management_proto::{
-        ListUsersRequest as ProtoListUsersRequest, user_management_server::UserManagement,
-    },
+    service::user_management::user_management_proto::user_management_server::UserManagement,
 };
 
 /// Authenticate a user and return an access token.
@@ -125,28 +123,43 @@ pub async fn list_users(
 ) -> Result<impl Responder> {
     let authorization_header = crate::api::extract_authorization_header(&http_request)?;
 
-    let request = tonic::Request::new(ProtoListUsersRequest::from((
-        payload.into_inner(),
-        authorization_header,
-    )));
+    let request = payload.into_inner();
 
-    match services.user_management_service.list_users(request).await {
-        Ok(response) => {
-            // Convert the successful gRPC response into the HTTP response
-            Ok(HttpResponse::Ok().json(
-                response
-                    .into_inner()
-                    .users
-                    .into_iter()
-                    .map(|user| User::from(user))
-                    .collect::<Vec<User>>(),
-            ))
-        }
-        Err(status) => {
-            // Map the gRPC error status to an appropriate HTTP response with logging
-            Ok(crate::api::map_grpc_error_to_http_response(status))
-        }
+    let mut conn = super::get_database_connection(
+        services
+            .archive_management_service
+            .database_connection_pool
+            .clone(),
+    )?;
+
+    // Validate JWT
+    let jwt_token = services
+        .user_management_service
+        .jwt
+        .decode_jwt_token(&authorization_header)?;
+
+    if !jwt_token
+        .claims
+        .permissions
+        .contains(&PermissionType::ViewUsers.to_string())
+    {
+        return Err(ErrorUnauthorized("Insufficient permissions to list users"));
     }
+
+    // Fetch filtered users
+    let users: Vec<User> = UserModel::get_filtered_users(
+        &mut conn,
+        request.username.as_deref(),
+        request.name_regex.as_deref(),
+        request.cellphone_number.as_deref(),
+        request.email_address.as_deref(),
+        request.identification_number.as_deref(),
+    )?
+    .iter()
+    .map(|user| User::from((user, vec![])))
+    .collect();
+
+    Ok(HttpResponse::Ok().json(users))
 }
 
 /// Get user details and permissions
@@ -202,7 +215,7 @@ pub async fn get_user_details(
 
     let user_permissions = UserPermission::get_all_user_permissions(&mut conn, user_id)?;
 
-    Ok(HttpResponse::Ok().json(User::from((user, user_permissions))))
+    Ok(HttpResponse::Ok().json(User::from((&user, user_permissions))))
 }
 
 /// Update user details and permissions
@@ -286,7 +299,7 @@ pub async fn update_user_details(
         UserPermission::get_all_user_permissions(&mut conn, user_id)?
     };
 
-    Ok(HttpResponse::Ok().json(User::from((updated_user, user_permissions))))
+    Ok(HttpResponse::Ok().json(User::from((&updated_user, user_permissions))))
 }
 
 // /// Update a user’s permissions

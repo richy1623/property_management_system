@@ -6,7 +6,8 @@ INSERT INTO
         name,
         cellphone_number,
         email_address,
-        password_hash
+        password_hash,
+        is_employee
     )
 VALUES
     (
@@ -14,7 +15,8 @@ VALUES
         'Administrator',
         '+27721234197',
         'richy1623@gmail.com',
-        '$argon2id$v=19$m=19456,t=4,p=1$wE+hodHLGizc24bsaGmp0w$AdrY6NjgZmI4DM7MwhfO43T+MqSKOgPZedo7kIKI+kE'
+        '$argon2id$v=19$m=19456,t=4,p=1$wE+hodHLGizc24bsaGmp0w$AdrY6NjgZmI4DM7MwhfO43T+MqSKOgPZedo7kIKI+kE',
+        true
     );
 
 INSERT INTO user_permission (user_id, permission)

@@ -165,15 +165,15 @@ mod converter {
         },
     };
 
-    impl From<(UserModel, Vec<PermissionType>)> for User {
-        fn from(value: (UserModel, Vec<PermissionType>)) -> Self {
+    impl From<(&UserModel, Vec<PermissionType>)> for User {
+        fn from(value: (&UserModel, Vec<PermissionType>)) -> Self {
             User {
                 user_id: value.0.user_id,
-                username: value.0.user_name,
-                name: value.0.name,
-                cellphone_number: value.0.cellphone_number,
-                email_address: value.0.email_address,
-                identification_number: value.0.identification_number,
+                username: value.0.user_name.clone(),
+                name: value.0.name.clone(),
+                cellphone_number: value.0.cellphone_number.clone(),
+                email_address: value.0.email_address.clone(),
+                identification_number: value.0.identification_number.clone(),
                 permissions: value.1,
                 is_employee: value.0.is_employee,
             }

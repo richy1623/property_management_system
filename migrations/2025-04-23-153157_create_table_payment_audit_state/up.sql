@@ -8,7 +8,7 @@ CREATE TABLE
         change_timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
         changed_by_user INTEGER NOT NULL,
         comment TEXT NOT NULL,
-        CONSTRAINT fk_payment FOREIGN KEY (payment_id) REFERENCES payment (payment_id),
+        CONSTRAINT fk_payment FOREIGN KEY (payment_id) REFERENCES payment (payment_id) ON DELETE CASCADE,
         CONSTRAINT fk_changed_by FOREIGN KEY (changed_by_user) REFERENCES "user" (user_id)
     );
 
