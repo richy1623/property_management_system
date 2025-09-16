@@ -96,15 +96,22 @@ jobs:
       - name: Install protobuf compiler
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
 
-      - name: Extract version from Cargo
-        id: cargo_version
+      - name: Extract Cargo name and version
+        id: cargo_info
         run: |
-          VERSION=$(cargo pkgid | sed -E 's/.*#(.*)/\1/')
+          PKGID=$(cargo pkgid)
+          # Extract version after #
+          VERSION=${PKGID##*#}
+          # Extract package name (last part of path)
+          NAME_WITH_PATH=${PKGID%%#*}
+          NAME=$(basename $NAME_WITH_PATH)
+
+          echo "name=$NAME" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Build and push image
         run: |
-          IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/$(basename ${{ github.repository }})
+          IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/${{ steps.cargo_info.outputs.name }}
           VERSION=${{ steps.cargo_version.outputs.version }}
           COMMIT_SHA=${{ github.sha }}
 
