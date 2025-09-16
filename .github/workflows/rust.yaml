@@ -93,18 +93,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Extract Cargo name and version
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Extract Cargo package name and version
         id: cargo_info
         run: |
           METADATA=$(cargo metadata --no-deps --format-version 1)
-
-          # Extract package name
-          NAME=$(echo "$METADATA" | grep '"name":' | head -n1 | sed -E 's/.*"name": "(.*)".*/\1/')
-
-          # Extract version
-          VERSION=$(echo "$METADATA" | grep '"version":' | head -n1 | sed -E 's/.*"version": "(.*)".*/\1/')
-
-
+          NAME=$(echo "$METADATA" | jq -r '.packages[0].name')
+          VERSION=$(echo "$METADATA" | jq -r '.packages[0].version')
           echo "name=$NAME" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo $NAME
