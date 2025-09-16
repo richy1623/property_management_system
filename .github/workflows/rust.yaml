@@ -93,23 +93,25 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Install protobuf compiler
-        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
-
       - name: Extract Cargo name and version
         id: cargo_info
         run: |
-          PKGID=$(cargo pkgid)
-          # Extract version after #
-          VERSION=${PKGID##*#}
-          # Extract package name (last part of path)
-          NAME_WITH_PATH=${PKGID%%#*}
-          NAME=$(basename $NAME_WITH_PATH)
+          METADATA=$(cargo metadata --no-deps --format-version 1)
+
+          # Extract package name
+          NAME=$(echo "$METADATA" | grep '"name":' | head -n1 | sed -E 's/.*"name": "(.*)".*/\1/')
+
+          # Extract version
+          VERSION=$(echo "$METADATA" | grep '"version":' | head -n1 | sed -E 's/.*"version": "(.*)".*/\1/')
+
 
           echo "name=$NAME" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo $NAME
           echo $VERSION
+
+      - name: Install protobuf compiler
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
 
       - name: Build and push image
         run: |
