@@ -37,20 +37,6 @@ async fn main() -> std::io::Result<()> {
         secure_storage,
     ));
 
-    // User::create_user(
-    //     &mut property_management_system::get_connection_pool(&database_url)
-    //         .clone()
-    //         .get()
-    //         .unwrap(),
-    //     "richy",
-    //     "richard",
-    //     Some("cellphone_number"),
-    //     Some("email_address"),
-    //     Some("identification_number"),
-    //     "password",
-    // )
-    // .unwrap();
-
     HttpServer::new(move || {
         App::new()
             .wrap(Logger::default())

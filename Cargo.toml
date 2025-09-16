@@ -33,7 +33,7 @@ actix-web = { version = "4.11.0", features = [] }
 utoipa = { version = "5.4.0", features = ["macros", "actix_extras", "chrono"] }
 utoipa-swagger-ui = { version = "9.0.2", features = ["actix-web"] }
 tracing = "0.1.41"
-tracing-subscriber = "0.3.19"
+tracing-subscriber = "0.3.20"
 actix-cors = "0.7.1"
 
 [build-dependencies]
@@ -42,23 +42,6 @@ tonic-build = "0.13.1"
 [dev-dependencies]
 rstest = "0.26.1"
 tempfile = "3.21.0"
-
-
-[[bin]]
-name = "user_management_service_server"
-path = "src/bin/user_management_service_server.rs"
-
-[[bin]]
-name = "payment_management_service_server"
-path = "src/bin/payment_management_service_server.rs"
-
-[[bin]]
-name = "artifact_management_service_server"
-path = "src/bin/artifact_management_service_server.rs"
-
-[[bin]]
-name = "property_management_service_server"
-path = "src/bin/property_management_service_server.rs"
 
 [[bin]]
 name = "management_api_server"
