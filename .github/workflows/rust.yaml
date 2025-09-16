@@ -93,9 +93,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
-
       - name: Extract Cargo package name and version
         id: cargo_info
         run: |
@@ -104,16 +101,13 @@ jobs:
           VERSION=$(echo "$METADATA" | jq -r '.packages[0].version')
           echo "name=$NAME" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo $NAME
-          echo $VERSION
-
-      - name: Install protobuf compiler
-        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+          echo "name=$NAME"
+          echo "version=$VERSION"
 
       - name: Build and push image
         run: |
           IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/${{ steps.cargo_info.outputs.name }}
-          VERSION=${{ steps.cargo_version.outputs.version }}
+          VERSION=${{ steps.cargo_info.outputs.version }}
           COMMIT_SHA=${{ github.sha }}
 
           # Tag with version, commit sha, and latest
