@@ -4,21 +4,21 @@ version = "0.1.0-SNAPSHOT"
 edition = "2024"
 
 [dependencies]
-diesel = { version = "2.2.12", features = ["postgres", "chrono", "r2d2"] }
+diesel = { version = "2.3.2", features = ["postgres", "chrono", "r2d2"] }
 diesel-derive-enum = { version = "3.0.0-beta.1", features = ["postgres"] }
-diesel_migrations = "2.2.0"
+diesel_migrations = "2.3.0"
 pq-sys = { version = "0.7.2", features = ["bundled"] }
 openssl-sys = { version = "0.9.109", features = ["vendored"] }
 dotenvy = "0.15"
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0.143"
+serde_json = "1.0.145"
 # TODO Update when v6 of password hash comes out
 argon2 = { version = "0.5" }
 rand_core = { version = "0.6", features = ["getrandom"] }
 password-hash = { version = "0.5", features = ["rand_core"] }
-chrono = { version = "0.4.41", features = ["serde"] }
+chrono = { version = "0.4.42", features = ["serde"] }
 once_cell = "1.21.3"
-uuid = { version = "1.18.0", features = ["v4"] }
+uuid = { version = "1.18.1", features = ["v4"] }
 tonic = "0.13.1"
 prost = "0.13"
 prost-types = "0.13"
@@ -29,7 +29,7 @@ num_enum = "0.7.4"
 aes-gcm = "0.10.3"
 env_logger = "0.11.8"
 envy = "0.4.2"
-actix-web = { version = "4.11.0", features = [] }
+actix-web = { version = "4.11.0", features = ["rustls-0_23"] }
 utoipa = { version = "5.4.0", features = ["macros", "actix_extras", "chrono"] }
 utoipa-swagger-ui = { version = "9.0.2", features = ["actix-web"] }
 tracing = "0.1.41"
@@ -41,7 +41,7 @@ tonic-build = "0.13.1"
 
 [dev-dependencies]
 rstest = "0.26.1"
-tempfile = "3.21.0"
+tempfile = "3.22.0"
 
 [[bin]]
 name = "management_api_server"
