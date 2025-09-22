@@ -20,3 +20,7 @@ tarpaulin-report.html
 
 # Saved Files
 /2025
+
+# Certificates
+cert.pem
+key.pem
