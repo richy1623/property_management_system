@@ -17,10 +17,10 @@ or kept in the local file system.
 
 ```shell
 # Generate a P-256 EC private key
-openssl ecparam -name prime256v1 -genkey -noout -out key.pem
+openssl ecparam -name prime256v1 -genkey -noout -out certs/key.pem
 
 # Create a self-signed cert valid for 365 days
-openssl req -new -x509 -key key.pem -out cert.pem -days 365 -subj "/CN=localhost"
+openssl req -new -x509 -key key.pem -out certs/cert.pem -days 365 -subj "/CN=localhost"
 ```
 
 Note: You can trust the cert with the following command:

@@ -22,5 +22,6 @@ tarpaulin-report.html
 /2025
 
 # Certificates
+certs/
 cert.pem
 key.pem

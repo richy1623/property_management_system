@@ -1,4 +1,4 @@
-use std::{env, net::Ipv4Addr, sync::Arc};
+use std::{env, net::Ipv4Addr, path::Path, sync::Arc};
 
 use actix_cors::Cors;
 use actix_web::{App, HttpServer, middleware::Logger};
@@ -68,13 +68,13 @@ fn load_rustls_config() -> rustls::ServerConfig {
         .unwrap();
 
     // load TLS key/cert files
-    let cert_chain = CertificateDer::pem_file_iter("cert.pem")
+    let cert_chain = CertificateDer::pem_file_iter(Path::new("certs").join("cert.pem"))
         .unwrap()
         .flatten()
         .collect();
 
-    let key_der =
-        PrivateKeyDer::from_pem_file("key.pem").expect("Could not locate PKCS 8 private keys.");
+    let key_der = PrivateKeyDer::from_pem_file(Path::new("certs").join("key.pem"))
+        .expect("Could not locate PKCS 8 private keys.");
 
     ServerConfig::builder()
         .with_no_client_auth()
