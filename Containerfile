@@ -1,7 +1,15 @@
 # --- Build stage ---
-FROM rust:1.89 as builder
+FROM rust:1.90-slim-trixie as builder
 WORKDIR /usr/src/property_management_system 
-RUN apt-get update && apt-get install -y protobuf-compiler && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        build-essential \
+        protobuf-compiler \
+        pkg-config \
+        libssl-dev \
+        ca-certificates \
+        curl \
+    && rm -rf /var/lib/apt/lists/*
 # Container layer cache step
 COPY Cargo.toml Cargo.lock ./
 RUN mkdir -p src/bin && echo "fn main() {}" > src/bin/management_api_server.rs
