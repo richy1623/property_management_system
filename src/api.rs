@@ -2,6 +2,8 @@ use std::sync::Arc;
 
 use actix_web::{Error as ActixError, error::*};
 use actix_web::{HttpRequest, HttpResponse};
+use diesel::PgConnection;
+use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::result::DatabaseErrorKind;
 
 use crate::{
@@ -26,6 +28,7 @@ pub struct AppServices {
     pub payment_management_service: Arc<PaymentManagementService>,
     pub property_management_service: Arc<PropertyManagementService>,
     pub archive_management_service: Arc<ArtifactManagementService>,
+    pub database_connection_pool: Pool<ConnectionManager<PgConnection>>,
 }
 
 pub fn extract_authorization_header(http_request: &HttpRequest) -> Result<String, ActixError> {
@@ -99,10 +102,11 @@ impl AppServices {
                 jwt: Jwt::new(jwt_secret),
             }),
             archive_management_service: Arc::new(ArtifactManagementService {
-                database_connection_pool: db_pool,
+                database_connection_pool: db_pool.clone(),
                 jwt: Jwt::new(jwt_secret),
                 secure_storage,
             }),
+            database_connection_pool: db_pool.clone(),
         }
     }
 }
@@ -181,6 +185,7 @@ mod tests {
                     jwt: Jwt::new(jwt_secret),
                     secure_storage: secure_storage.clone(),
                 }),
+                database_connection_pool: db_pool.clone(),
             },
             jwt,
             secure_storage,

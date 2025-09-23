@@ -31,4 +31,5 @@ RUN apt-get update \
 WORKDIR /usr/local/bin/property_management_system
 # Copy the binary from the builder
 COPY --from=builder /usr/src/property_management_system/target/release/management_api_server /usr/local/bin/property_management_system/management_api_server
+HEALTHCHECK --interval=60s --timeout=5s --start-period=5s --retries=3 CMD curl -k https://localhost:8443/api/health || exit 
 CMD ["/usr/local/bin/property_management_system/management_api_server"]

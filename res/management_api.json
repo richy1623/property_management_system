@@ -1,6 +1,11 @@
 {
   "openapi": "3.1.0",
-  "info": { "title": "Management API", "description": "Management API", "license": { "name": "" }, "version": "0.1.0" },
+  "info": {
+    "title": "Management API",
+    "description": "Management API",
+    "license": { "name": "" },
+    "version": "0.1.0-SNAPSHOT"
+  },
   "paths": {
     "/api/artifact/{artifact_id}": {
       "get": {
@@ -66,6 +71,18 @@
           "401": { "description": "Unauthorized" }
         },
         "security": [{ "bearerAuth": [] }]
+      }
+    },
+    "/api/health": {
+      "get": {
+        "tags": ["Health Check"],
+        "summary": "Health check endpoint",
+        "description": "Returns the health status of the service and its database.",
+        "operationId": "health_check",
+        "responses": {
+          "200": { "description": "Service is healthy" },
+          "503": { "description": "Service or database is unavailable" }
+        }
       }
     },
     "/api/ownership/create": {
@@ -943,6 +960,7 @@
     { "name": "User Management", "description": "Operations related to user authentication and management" },
     { "name": "Property Management", "description": "Operations related to estates, plots, and ownership" },
     { "name": "Payment Management", "description": "Operations related to payment tracking and updates" },
-    { "name": "Artifact Management", "description": "Operations related to archival of artifacts" }
+    { "name": "Artifact Management", "description": "Operations related to archival of artifacts" },
+    { "name": "Health Check", "description": "Operations related to health of the service" }
   ]
 }

@@ -5,6 +5,7 @@ use diesel::{
 
 pub mod artifact_handler;
 pub mod estate_handler;
+pub mod health_handler;
 pub mod ownership_handler;
 pub mod payment_handler;
 pub mod plot_handler;

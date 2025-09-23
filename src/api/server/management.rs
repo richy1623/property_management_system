@@ -7,6 +7,7 @@ use utoipa_swagger_ui::SwaggerUi;
 use crate::api::AppServices;
 use crate::api::handler::artifact_handler::get_artifact;
 use crate::api::handler::estate_handler::{create_estate, list_estates};
+use crate::api::handler::health_handler::health_check;
 use crate::api::handler::ownership_handler::{
     create_ownership, get_ownership, get_ownerships, update_ownership,
 };
@@ -63,6 +64,8 @@ pub fn api_routes(app_services: Arc<AppServices>) -> Scope {
         )
         // Artifact routes
         .service(web::scope("/artifact").route("/{artifact_id}", web::get().to(get_artifact)))
+        // Health check routes
+        .service(web::scope("/health").route("", web::get().to(health_check)))
         // Serve Swagger UI
         .service(
             web::scope("/docs")
@@ -80,8 +83,8 @@ pub fn api_routes(app_services: Arc<AppServices>) -> Scope {
 pub mod doc {
 
     use crate::api::handler::{
-        artifact_handler, estate_handler, ownership_handler, payment_handler, plot_handler,
-        user_handler,
+        artifact_handler, estate_handler, health_handler, ownership_handler, payment_handler,
+        plot_handler, user_handler,
     };
 
     use utoipa::OpenApi;
@@ -107,13 +110,15 @@ pub mod doc {
         payment_handler::get_payments_for_ownership,
         payment_handler::get_payments_in_state,
         payment_handler::update_payment_state,
-        artifact_handler::get_artifact
+        artifact_handler::get_artifact,
+        health_handler::health_check
     ),
     tags(
         (name = "User Management", description = "Operations related to user authentication and management"),
         (name = "Property Management", description = "Operations related to estates, plots, and ownership"),
         (name = "Payment Management", description = "Operations related to payment tracking and updates"),
-        (name = "Artifact Management", description = "Operations related to archival of artifacts")
+        (name = "Artifact Management", description = "Operations related to archival of artifacts"),
+        (name = "Health Check", description = "Operations related to health of the service")
     )
 )]
     pub struct ApiDoc;

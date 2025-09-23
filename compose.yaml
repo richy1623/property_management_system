@@ -1,6 +1,6 @@
 services:
   postgres-db:
-    image: docker.io/library/postgres:17.4
+    image: docker.io/library/postgres:17.6
     container_name: postgres-db
     restart: always
     environment:
