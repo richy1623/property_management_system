@@ -68,6 +68,7 @@ pub mod tests {
             super::ownership::OwnershipState::PendingContract,
             1000,
             100,
+            Some(NaiveDate::from_ymd_opt(2000, 09, 05).unwrap()),
         )
         .unwrap()
     }

@@ -209,6 +209,7 @@ mod tests {
             OwnershipState::ActivePayment,
             0,
             0,
+            None,
         )
         .unwrap();
         Ownership::create_ownership(
@@ -218,6 +219,7 @@ mod tests {
             OwnershipState::ActivePayment,
             0,
             0,
+            None,
         )
         .unwrap();
         Ownership::create_ownership(
@@ -227,6 +229,7 @@ mod tests {
             OwnershipState::PendingContract,
             0,
             0,
+            None,
         )
         .unwrap();
 

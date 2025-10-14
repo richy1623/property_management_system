@@ -14,8 +14,7 @@ CREATE TABLE
         state ownership_state NOT NULL,
         total_sale_value INTEGER DEFAULT 0 NOT NULL,
         monthly_repayment_amount INTEGER DEFAULT 0 NOT NULL,
-        -- TODO contract_path
-        -- contract_path TEXT,
+        contract_start_date DATE,
         CONSTRAINT fk_person FOREIGN KEY (user_id) REFERENCES "user" (user_id) ON DELETE CASCADE,
         CONSTRAINT fk_plot FOREIGN KEY (plot_id) REFERENCES plot (plot_id) ON DELETE CASCADE
     );

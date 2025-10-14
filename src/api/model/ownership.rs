@@ -26,6 +26,9 @@ pub struct Ownership {
 
     #[schema(example = 50_000)]
     pub monthly_repayment_amount: i32,
+
+    #[schema(example = "2025-06-01", format = "date")]
+    pub contract_start_date: Option<chrono::NaiveDate>,
 }
 
 /// Request for creating a new ownership.
@@ -45,6 +48,9 @@ pub struct OwnershipCreationRequest {
 
     #[schema(example = 50_000)]
     pub monthly_repayment_amount: i32,
+
+    #[schema(example = "2025-06-01", format = "date")]
+    pub contract_start_date: Option<chrono::NaiveDate>,
 }
 
 /// Request for updating an ownership.
@@ -61,6 +67,9 @@ pub struct OwnershipUpdateRequest {
 
     #[schema(example = 50_000)]
     pub monthly_repayment_amount: Option<i32>,
+
+    #[schema(example = "2025-06-01", format = "date")]
+    pub contract_start_date: Option<chrono::NaiveDate>,
 }
 
 /// Filter parameters for querying ownerships
@@ -138,31 +147,7 @@ mod converter {
                 state: ownership.state.try_into().unwrap(),
                 total_sale_value: ownership.total_sale_value,
                 monthly_repayment_amount: ownership.monthly_repayment_amount,
-            }
-        }
-    }
-
-    impl From<ProtoOwnershipCreationRequest> for OwnershipCreationRequest {
-        fn from(ownership_creation_request: ProtoOwnershipCreationRequest) -> Self {
-            Self {
-                user_id: ownership_creation_request.user_id,
-                plot_id: ownership_creation_request.plot_id,
-                state: ownership_creation_request.state.try_into().unwrap(),
-                total_sale_value: ownership_creation_request.total_sale_value,
-                monthly_repayment_amount: ownership_creation_request.monthly_repayment_amount,
-            }
-        }
-    }
-
-    impl From<ProtoOwnershipUpdateRequest> for OwnershipUpdateRequest {
-        fn from(ownership_update_request: ProtoOwnershipUpdateRequest) -> Self {
-            Self {
-                ownership_id: ownership_update_request.ownership_id,
-                state: ownership_update_request
-                    .state
-                    .map(|state| state.try_into().unwrap()),
-                total_sale_value: ownership_update_request.total_sale_value,
-                monthly_repayment_amount: ownership_update_request.monthly_repayment_amount,
+                contract_start_date: None,
             }
         }
     }
@@ -177,6 +162,7 @@ mod converter {
                 state: ownership.state,
                 total_sale_value: ownership.total_sale_value,
                 monthly_repayment_amount: ownership.monthly_repayment_amount,
+                contract_start_date: ownership.contract_start_date,
             }
         }
     }

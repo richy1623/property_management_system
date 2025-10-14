@@ -214,6 +214,7 @@ impl PropertyManagement for PropertyManagementService {
             })?,
             request.total_sale_value,
             request.monthly_repayment_amount,
+            None,
         )?;
 
         // Fetch the user to get username
@@ -280,6 +281,7 @@ impl PropertyManagement for PropertyManagementService {
             new_ownership_state,
             total_sale_value,
             monthly_repayment_amount,
+            None,
             user_making_update.user_id,
         )?;
 

@@ -20,7 +20,7 @@ or kept in the local file system.
 openssl ecparam -name prime256v1 -genkey -noout -out certs/key.pem
 
 # Create a self-signed cert valid for 365 days
-openssl req -new -x509 -key key.pem -out certs/cert.pem -days 365 -subj "/CN=localhost"
+openssl req -new -x509 -key certs/key.pem -out certs/cert.pem -days 365 -subj "/CN=localhost"
 ```
 
 Note: You can trust the cert with the following command:

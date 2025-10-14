@@ -46,6 +46,7 @@ diesel::table! {
         state -> OwnershipState,
         total_sale_value -> Int4,
         monthly_repayment_amount -> Int4,
+        contract_start_date -> Nullable<Date>,
     }
 }
 

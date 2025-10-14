@@ -692,6 +692,7 @@ mod tests {
         assert_eq!(payment.reference, "BANK-123");
         assert_eq!(payment.last_changed_by_user, user.user_id);
         assert_eq!(payment.state, PaymentState::PendingApproval);
+        assert_eq!(payment.date, NaiveDate::from_ymd_opt(2025, 06, 11).unwrap());
     }
 
     #[rstest]

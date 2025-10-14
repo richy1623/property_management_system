@@ -26,7 +26,7 @@ RUN cargo build --release
 # --- Runtime stage ---
 FROM debian:trixie-slim as runtime
 RUN apt-get update \
-    && apt-get install -y libssl-dev ca-certificates libpq5 \
+    && apt-get install -y libssl-dev ca-certificates libpq5 curl \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /usr/local/bin/property_management_system
 # Copy the binary from the builder

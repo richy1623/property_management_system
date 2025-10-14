@@ -46,6 +46,7 @@ pub struct Ownership {
     pub state: OwnershipState,
     pub total_sale_value: i32,
     pub monthly_repayment_amount: i32,
+    pub contract_start_date: Option<chrono::NaiveDate>,
 }
 
 impl Ownership {
@@ -56,6 +57,7 @@ impl Ownership {
         state: OwnershipState,
         total_sale_value: i32,
         monthly_repayment_amount: i32,
+        contract_start_date: Option<chrono::NaiveDate>,
     ) -> Result<Ownership, Error> {
         insert_into(ownership::table)
             .values((
@@ -64,6 +66,7 @@ impl Ownership {
                 ownership::state.eq(state),
                 ownership::total_sale_value.eq(total_sale_value),
                 ownership::monthly_repayment_amount.eq(monthly_repayment_amount),
+                ownership::contract_start_date.eq(contract_start_date),
             ))
             .get_result(conn)
             .map_err(Into::into)
@@ -107,6 +110,7 @@ impl Ownership {
         new_state: Option<OwnershipState>,
         new_total_sale_value: Option<i32>,
         new_monthly_repayment_amount: Option<i32>,
+        contract_start_date: Option<chrono::NaiveDate>,
         _updated_by_user_id: i32,
     ) -> Result<Ownership, Error> {
         // TODO audit log
@@ -118,6 +122,7 @@ impl Ownership {
                     .eq(new_total_sale_value.unwrap_or(existing_ownership.total_sale_value)),
                 ownership::monthly_repayment_amount.eq(new_monthly_repayment_amount
                     .unwrap_or(existing_ownership.monthly_repayment_amount)),
+                ownership::contract_start_date.eq(contract_start_date),
             ))
             .get_result(conn)
             .map_err(Into::into)
@@ -152,6 +157,7 @@ impl Ownership {
 
 #[cfg(test)]
 mod tests {
+    use chrono::NaiveDate;
     use diesel::{
         PgConnection,
         r2d2::{ConnectionManager, Pool},
@@ -175,6 +181,8 @@ mod tests {
         let plot = crate::db::model::tests::create_test_plot(&mut conn, &estate);
         let user = crate::db::model::tests::create_test_user(&mut conn);
 
+        let date = NaiveDate::from_ymd_opt(2025, 09, 05).unwrap();
+
         let ownership = Ownership::create_ownership(
             &mut conn,
             user.user_id,
@@ -182,6 +190,7 @@ mod tests {
             OwnershipState::PendingContract,
             1000,
             10,
+            Some(date),
         )
         .unwrap();
 
@@ -190,6 +199,7 @@ mod tests {
         assert_eq!(ownership.state, OwnershipState::PendingContract);
         assert_eq!(ownership.total_sale_value, 1000);
         assert_eq!(ownership.monthly_repayment_amount, 10);
+        assert_eq!(ownership.contract_start_date.unwrap(), date);
 
         assert_eq!(
             ownership,
@@ -269,12 +279,15 @@ mod tests {
 
         let ownership = crate::db::model::tests::create_test_ownership(&mut conn, &plot, &user);
 
+        let date = NaiveDate::from_ymd_opt(2025, 09, 05).unwrap();
+
         let update_ownership = Ownership::update_ownership(
             &mut conn,
             ownership.ownership_id,
             Some(OwnershipState::Paid),
             Some(10),
             Some(1),
+            Some(date),
             user.user_id,
         )
         .unwrap();
@@ -284,6 +297,7 @@ mod tests {
         assert_eq!(update_ownership.state, OwnershipState::Paid);
         assert_eq!(update_ownership.total_sale_value, 10);
         assert_eq!(update_ownership.monthly_repayment_amount, 1);
+        assert_eq!(update_ownership.contract_start_date.unwrap(), date);
 
         let ownership_in_db = Ownership::get_ownership(&mut conn, ownership.ownership_id).unwrap();
 
@@ -316,6 +330,7 @@ mod tests {
             &mut conn,
             ownership_3.ownership_id,
             Some(OwnershipState::Paid),
+            None,
             None,
             None,
             user_2.user_id,

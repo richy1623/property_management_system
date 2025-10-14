@@ -13,7 +13,6 @@ use crate::{
         user_permission::PermissionType,
     },
     error::Error,
-    service::property_management::property_management_proto::property_management_server::PropertyManagement,
 };
 use actix_web::{
     HttpRequest, HttpResponse, Responder,
@@ -21,8 +20,6 @@ use actix_web::{
     web,
 };
 use actix_web::{Result, error::ErrorUnauthorized};
-
-use crate::service::property_management::property_management_proto::OwnershipUpdateRequest as ProtoOwnershipUpdateRequest;
 
 /// Create a new ownership record
 ///
@@ -52,13 +49,6 @@ pub async fn create_ownership(
 
     let request = payload.into_inner();
 
-    let mut conn = super::get_database_connection(
-        services
-            .property_management_service
-            .database_connection_pool
-            .clone(),
-    )?;
-
     // Validate JWT token
     let jwt = services
         .property_management_service
@@ -75,6 +65,21 @@ pub async fn create_ownership(
             "Insufficient permissions to Modify Ownerships",
         ));
     }
+
+    // Check that a contract start date is provided for any ActivePayment contracts
+    if request.state == OwnershipState::ActivePayment && request.contract_start_date.is_none() {
+        return Err(ErrorBadRequest(
+            "Any contract in ActivePayment requires a contract start date",
+        ));
+    }
+
+    // Initialize DB connection
+    let mut conn = super::get_database_connection(
+        services
+            .property_management_service
+            .database_connection_pool
+            .clone(),
+    )?;
 
     // Only allow a single non Defaulted ownership
     if request.state != OwnershipState::Defaulted {
@@ -102,6 +107,7 @@ pub async fn create_ownership(
             .map_err(|_e| ErrorBadRequest(format!("Invalid state: {:?}", request.state)))?,
         request.total_sale_value,
         request.monthly_repayment_amount,
+        request.contract_start_date,
     )?;
 
     // Fetch the user to get username
@@ -124,7 +130,8 @@ pub async fn create_ownership(
     responses(
         (status = 200, description = "Ownership updated successfully", body = Ownership),
         (status = 400, description = "Missing or invalid input"),
-        (status = 401, description = "Unauthorized")
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Invalid OwnershipUpdateRequest payload received"),
     ),
     security(
         ("bearerAuth" = [])
@@ -138,25 +145,49 @@ pub async fn update_ownership(
 ) -> Result<impl Responder> {
     let authorization_header = crate::api::extract_authorization_header(&http_request)?;
 
-    let request = tonic::Request::new(ProtoOwnershipUpdateRequest::from((
-        payload.into_inner(),
-        authorization_header,
-    )));
+    let request = payload.into_inner();
 
-    match services
+    // Initialize DB connection
+    let mut conn = super::get_database_connection(
+        services
+            .property_management_service
+            .database_connection_pool
+            .clone(),
+    )?;
+
+    // Decode and validate JWT
+    let jwt = services
         .property_management_service
-        .update_ownership(request)
-        .await
+        .jwt
+        .decode_jwt_token(&authorization_header)?;
+    if !jwt
+        .claims
+        .permissions
+        .contains(&PermissionType::ModifyOwnerships.to_string())
     {
-        Ok(response) => {
-            // Convert the successful gRPC response into the HTTP response
-            Ok(HttpResponse::Ok().json(Ownership::from(response.into_inner())))
-        }
-        Err(status) => {
-            // Map the gRPC error status to an appropriate HTTP response with logging
-            Ok(crate::api::map_grpc_error_to_http_response(status))
-        }
+        return Err(ErrorUnauthorized(
+            "Insufficient permissions to Modify Ownerships",
+        ));
     }
+
+    // Get user making update
+    let user_making_update = UserModel::get_user_by_user_name(&mut conn, &jwt.claims.sub)?;
+
+    // Update ownership
+    let updated_ownership = OwnershipModel::update_ownership(
+        &mut conn,
+        request.ownership_id,
+        request.state,
+        request.total_sale_value,
+        request.monthly_repayment_amount,
+        request.contract_start_date,
+        user_making_update.user_id,
+    )?;
+
+    Ok(HttpResponse::Ok().json(Ownership::from((
+        updated_ownership,
+        user_making_update.user_name,
+    ))))
 }
 
 /// Get an existing ownership record by ID
@@ -344,6 +375,7 @@ mod tests {
     use super::*;
 
     use actix_web::{App, http::StatusCode, test};
+    use chrono::NaiveDate;
     use diesel::{
         PgConnection,
         r2d2::{ConnectionManager, Pool},
@@ -420,6 +452,10 @@ mod tests {
         assert_eq!(response_json.state, OwnershipState::PendingContract);
         assert_eq!(response_json.total_sale_value, 5000000);
         assert_eq!(response_json.monthly_repayment_amount, 50000);
+        assert_eq!(
+            response_json.contract_start_date,
+            Some(NaiveDate::from_ymd_opt(2025, 08, 14).unwrap())
+        );
         // Check DB
         assert!(OwnershipModel::get_ownership(&mut conn, response_json.ownership_id).is_ok());
     }
@@ -484,12 +520,20 @@ mod tests {
         assert_eq!(response_json.state, OwnershipState::ActivePayment);
         assert_eq!(response_json.total_sale_value, 5000000);
         assert_eq!(response_json.monthly_repayment_amount, 50000);
+        assert_eq!(
+            response_json.contract_start_date,
+            Some(NaiveDate::from_ymd_opt(2025, 08, 14).unwrap())
+        );
         // Check DB
         let updated_ownership =
             OwnershipModel::get_ownership(&mut conn, response_json.ownership_id).unwrap();
         assert_eq!(updated_ownership.state, OwnershipState::ActivePayment);
         assert_eq!(updated_ownership.total_sale_value, 5000000);
         assert_eq!(updated_ownership.monthly_repayment_amount, 50000);
+        assert_eq!(
+            updated_ownership.contract_start_date,
+            Some(NaiveDate::from_ymd_opt(2025, 08, 14).unwrap())
+        );
     }
 
     #[rstest]

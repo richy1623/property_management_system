@@ -3,5 +3,6 @@
   "plot_id": "{{plot_id}}",
   "state": "PendingContract",
   "total_sale_value": 5000000,
-  "monthly_repayment_amount": 50000
+  "monthly_repayment_amount": 50000,
+  "contract_start_date": "2025-08-14"
 }
