@@ -147,14 +147,6 @@ pub async fn update_ownership(
 
     let request = payload.into_inner();
 
-    // Initialize DB connection
-    let mut conn = super::get_database_connection(
-        services
-            .property_management_service
-            .database_connection_pool
-            .clone(),
-    )?;
-
     // Decode and validate JWT
     let jwt = services
         .property_management_service
@@ -169,6 +161,24 @@ pub async fn update_ownership(
             "Insufficient permissions to Modify Ownerships",
         ));
     }
+
+    // Check that a contract start date is provided for any ActivePayment contracts
+    if request.state.is_some()
+        && request.state.clone().unwrap() == OwnershipState::ActivePayment
+        && request.contract_start_date.is_none()
+    {
+        return Err(ErrorBadRequest(
+            "Any contract in ActivePayment requires a contract start date",
+        ));
+    }
+
+    // Initialize DB connection
+    let mut conn = super::get_database_connection(
+        services
+            .property_management_service
+            .database_connection_pool
+            .clone(),
+    )?;
 
     // Get user making update
     let user_making_update = UserModel::get_user_by_user_name(&mut conn, &jwt.claims.sub)?;

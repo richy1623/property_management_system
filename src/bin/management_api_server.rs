@@ -58,6 +58,7 @@ async fn main() -> std::io::Result<()> {
             )
     })
     .bind_rustls_0_23((Ipv4Addr::UNSPECIFIED, 8443), rustls_config)?
+    .bind((Ipv4Addr::UNSPECIFIED, 8080))?
     .run()
     .await
 }

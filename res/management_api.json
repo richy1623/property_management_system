@@ -127,7 +127,8 @@
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Ownership" } } }
           },
           "400": { "description": "Missing or invalid input" },
-          "401": { "description": "Unauthorized" }
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Invalid OwnershipUpdateRequest payload received" }
         },
         "security": [{ "bearerAuth": [] }]
       }
@@ -694,6 +695,7 @@
           "monthly_repayment_amount"
         ],
         "properties": {
+          "contract_start_date": { "type": ["string", "null"], "format": "date", "example": "2025-06-01" },
           "monthly_repayment_amount": { "type": "integer", "format": "int32", "example": 50000 },
           "ownership_id": { "type": "integer", "format": "int32", "example": 1001 },
           "plot_id": { "type": "integer", "format": "int32", "example": 101 },
@@ -708,6 +710,7 @@
         "description": "Request for creating a new ownership.",
         "required": ["user_id", "plot_id", "state", "total_sale_value", "monthly_repayment_amount"],
         "properties": {
+          "contract_start_date": { "type": ["string", "null"], "format": "date", "example": "2025-06-01" },
           "monthly_repayment_amount": { "type": "integer", "format": "int32", "example": 50000 },
           "plot_id": { "type": "integer", "format": "int32", "example": 101 },
           "state": { "$ref": "#/components/schemas/OwnershipState" },
@@ -721,6 +724,7 @@
         "description": "Request for updating an ownership.",
         "required": ["ownership_id"],
         "properties": {
+          "contract_start_date": { "type": ["string", "null"], "format": "date", "example": "2025-06-01" },
           "monthly_repayment_amount": { "type": ["integer", "null"], "format": "int32", "example": 50000 },
           "ownership_id": { "type": "integer", "format": "int32", "example": 1001 },
           "state": { "oneOf": [{ "type": "null" }, { "$ref": "#/components/schemas/OwnershipState" }] },
