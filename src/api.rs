@@ -54,7 +54,7 @@ impl From<Error> for ActixError {
     fn from(err: Error) -> Self {
         match err {
             Error::DatabaseError(diesel_err) => match diesel_err {
-                diesel::result::Error::NotFound => ErrorBadRequest("Resource not found"),
+                diesel::result::Error::NotFound => ErrorNotFound("Resource not found"),
                 diesel::result::Error::DatabaseError(kind, info) => match kind {
                     DatabaseErrorKind::UniqueViolation => ErrorConflict("Duplicate entry"),
                     DatabaseErrorKind::UnableToSendCommand

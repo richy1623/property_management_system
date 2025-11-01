@@ -26,7 +26,11 @@
         "responses": {
           "200": {
             "description": "The requested artifact",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Artifact" } } }
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Artifact" }
+              }
+            }
           },
           "400": { "description": "Missing or invalid input" },
           "401": { "description": "Unauthorized" }
@@ -42,13 +46,21 @@
         "operationId": "create_estate",
         "requestBody": {
           "description": "Estate creation data",
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EstateCreationRequest" } } },
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/EstateCreationRequest" }
+            }
+          },
           "required": true
         },
         "responses": {
           "201": {
             "description": "Estate created successfully",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Estate" } } }
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Estate" }
+              }
+            }
           },
           "400": { "description": "Missing or invalid input" },
           "401": { "description": "Unauthorized" }
@@ -65,7 +77,11 @@
         "responses": {
           "200": {
             "description": "List of estates",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EstateList" } } }
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EstateList" }
+              }
+            }
           },
           "400": { "description": "Missing or invalid input" },
           "401": { "description": "Unauthorized" }
@@ -93,19 +109,32 @@
         "operationId": "create_ownership",
         "requestBody": {
           "description": "Ownership creation data",
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OwnershipCreationRequest" } } },
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnershipCreationRequest"
+              }
+            }
+          },
           "required": true
         },
         "responses": {
           "201": {
             "description": "Ownership created successfully",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Ownership" } } }
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Ownership" }
+              }
+            }
           },
           "400": {
             "description": "Missing or invalid input",
             "content": { "text/plain": { "schema": { "type": "string" } } }
           },
-          "401": { "description": "Unauthorized", "content": { "text/plain": { "schema": { "type": "string" } } } }
+          "401": {
+            "description": "Unauthorized",
+            "content": { "text/plain": { "schema": { "type": "string" } } }
+          }
         },
         "security": [{ "bearerAuth": [] }]
       }
@@ -118,17 +147,29 @@
         "operationId": "update_ownership",
         "requestBody": {
           "description": "Ownership update data",
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OwnershipUpdateRequest" } } },
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnershipUpdateRequest"
+              }
+            }
+          },
           "required": true
         },
         "responses": {
           "200": {
             "description": "Ownership updated successfully",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Ownership" } } }
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Ownership" }
+              }
+            }
           },
           "400": { "description": "Missing or invalid input" },
           "401": { "description": "Unauthorized" },
-          "404": { "description": "Invalid OwnershipUpdateRequest payload received" }
+          "404": {
+            "description": "Invalid OwnershipUpdateRequest payload received"
+          }
         },
         "security": [{ "bearerAuth": [] }]
       }
@@ -152,7 +193,11 @@
         "responses": {
           "200": {
             "description": "Ownership retrieved successfully",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Ownership" } } }
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Ownership" }
+              }
+            }
           },
           "401": { "description": "Unauthorized" },
           "404": { "description": "Ownership not found" }
@@ -186,7 +231,12 @@
             "in": "query",
             "description": "Optional state to filter ownerships",
             "required": false,
-            "schema": { "oneOf": [{ "type": "null" }, { "$ref": "#/components/schemas/OwnershipState" }] }
+            "schema": {
+              "oneOf": [
+                { "type": "null" },
+                { "$ref": "#/components/schemas/OwnershipState" }
+              ]
+            }
           }
         ],
         "responses": {
@@ -194,7 +244,10 @@
             "description": "Ownerships retrieved successfully",
             "content": {
               "application/json": {
-                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Ownership" } }
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Ownership" }
+                }
               }
             }
           },
@@ -212,13 +265,23 @@
         "operationId": "create_payment",
         "requestBody": {
           "description": "Details of the payment update",
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaymentCreationRequest" } } },
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentCreationRequest"
+              }
+            }
+          },
           "required": true
         },
         "responses": {
           "200": {
             "description": "Updated payment",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Payment" } } }
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Payment" }
+              }
+            }
           },
           "400": { "description": "Invalid input" },
           "401": { "description": "Unauthorized" }
@@ -244,7 +307,11 @@
         "responses": {
           "200": {
             "description": "List of payments for ownership",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaymentList" } } }
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PaymentList" }
+              }
+            }
           },
           "400": { "description": "Missing or invalid input" },
           "401": { "description": "Unauthorized" }
@@ -284,7 +351,11 @@
         "responses": {
           "200": {
             "description": "List of payments filtered by state",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaymentList" } } }
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PaymentList" }
+              }
+            }
           },
           "401": { "description": "Unauthorized" }
         },
@@ -299,13 +370,23 @@
         "operationId": "update_payment_state",
         "requestBody": {
           "description": "Details of the payment update",
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdatePaymentStateRequest" } } },
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePaymentStateRequest"
+              }
+            }
+          },
           "required": true
         },
         "responses": {
           "200": {
             "description": "Updated payment",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Payment" } } }
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Payment" }
+              }
+            }
           },
           "400": { "description": "Invalid input" },
           "401": { "description": "Unauthorized" }
@@ -321,13 +402,21 @@
         "operationId": "create_plot",
         "requestBody": {
           "description": "Plot creation data",
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PlotCreationRequest" } } },
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PlotCreationRequest" }
+            }
+          },
           "required": true
         },
         "responses": {
           "201": {
             "description": "Plot created successfully",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Plot" } } }
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Plot" }
+              }
+            }
           },
           "400": { "description": "Missing or invalid input" },
           "401": { "description": "Unauthorized" }
@@ -343,13 +432,52 @@
         "operationId": "list_plots",
         "requestBody": {
           "description": "Optional filters for plots",
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GetPlotsRequest" } } },
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/GetPlotsRequest" }
+            }
+          },
           "required": true
         },
         "responses": {
           "200": {
             "description": "List of plots",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PlotList" } } }
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PlotList" }
+              }
+            }
+          },
+          "400": { "description": "Missing or invalid input" },
+          "401": { "description": "Unauthorized" }
+        },
+        "security": [{ "bearerAuth": [] }]
+      }
+    },
+    "/api/plot/{plot_id}": {
+      "get": {
+        "tags": ["Property Management"],
+        "summary": "Fetch a plot with a given plot ID",
+        "description": "Returns the plot matching the plot ID.\nAuthorization: bearer token.",
+        "operationId": "get_plot",
+        "parameters": [
+          {
+            "name": "plot_id",
+            "in": "path",
+            "description": "The ID of the plot record to retrieve",
+            "required": true,
+            "schema": { "type": "integer", "format": "int32" },
+            "example": 42
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The desired Plot",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Plot" }
+              }
+            }
           },
           "400": { "description": "Missing or invalid input" },
           "401": { "description": "Unauthorized" }
@@ -365,13 +493,21 @@
         "operationId": "create_user",
         "requestBody": {
           "description": "User creation details",
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateUserRequest" } } },
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateUserRequest" }
+            }
+          },
           "required": true
         },
         "responses": {
           "201": {
             "description": "User created successfully",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } }
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/User" }
+              }
+            }
           },
           "400": { "description": "Missing or invalid input" },
           "401": { "description": "Unauthorized" },
@@ -388,14 +524,23 @@
         "operationId": "list_users",
         "requestBody": {
           "description": "Filters for querying users",
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ListUsersRequest" } } },
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ListUsersRequest" }
+            }
+          },
           "required": true
         },
         "responses": {
           "200": {
             "description": "List of users retrieved successfully",
             "content": {
-              "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/User" } } }
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/User" }
+                }
+              }
             }
           },
           "400": { "description": "Missing or invalid input" },
@@ -412,13 +557,21 @@
         "operationId": "login_user",
         "requestBody": {
           "description": "User login credentials",
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoginRequest" } } },
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginRequest" }
+            }
+          },
           "required": true
         },
         "responses": {
           "200": {
             "description": "Login successful",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AccessTokenResponse" } } }
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AccessTokenResponse" }
+              }
+            }
           },
           "400": { "description": "Missing or invalid input" },
           "401": { "description": "Unauthorized" }
@@ -443,7 +596,11 @@
         "responses": {
           "200": {
             "description": "User details retrieved successfully",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } }
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/User" }
+              }
+            }
           },
           "401": { "description": "Unauthorized" },
           "404": { "description": "User not found" }
@@ -465,13 +622,21 @@
           }
         ],
         "requestBody": {
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateUserRequest" } } },
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateUserRequest" }
+            }
+          },
           "required": true
         },
         "responses": {
           "200": {
             "description": "User details updated successfully",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } }
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/User" }
+              }
+            }
           },
           "401": { "description": "Unauthorized" },
           "404": { "description": "User not found" }
@@ -492,19 +657,46 @@
             "description": "The JWT access token string to be used for authorization in subsequent requests.",
             "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXCVI9..."
           },
-          "user_id": { "type": "integer", "format": "int32", "description": "Unique user ID.", "example": "101" }
+          "user_id": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Unique user ID.",
+            "example": "101"
+          }
         }
       },
       "Artifact": {
         "type": "object",
         "description": "Represents an uploaded artifact with metadata and file content",
-        "required": ["artifact_id", "file_display_name", "upload_date", "uploaded_by", "file_content"],
+        "required": [
+          "artifact_id",
+          "file_display_name",
+          "upload_date",
+          "uploaded_by",
+          "file_content"
+        ],
         "properties": {
-          "artifact_id": { "type": "integer", "format": "int32", "example": 5001 },
-          "file_content": { "type": "string", "format": "binary", "description": "Binary content of the artifact" },
+          "artifact_id": {
+            "type": "integer",
+            "format": "int32",
+            "example": 5001
+          },
+          "file_content": {
+            "type": "string",
+            "format": "binary",
+            "description": "Binary content of the artifact"
+          },
           "file_display_name": { "type": "string", "example": "receipt.pdf" },
-          "upload_date": { "type": "string", "format": "date", "example": "2025-06-01" },
-          "uploaded_by": { "type": "integer", "format": "int32", "example": 101 }
+          "upload_date": {
+            "type": "string",
+            "format": "date",
+            "example": "2025-06-01"
+          },
+          "uploaded_by": {
+            "type": "integer",
+            "format": "int32",
+            "example": 101
+          }
         }
       },
       "ArtifactFile": {
@@ -512,7 +704,11 @@
         "description": "File to be saved to as an artifact",
         "required": ["file_name", "file_content"],
         "properties": {
-          "file_content": { "type": "string", "format": "binary", "description": "Raw file contents as base64" },
+          "file_content": {
+            "type": "string",
+            "format": "binary",
+            "description": "Raw file contents as base64"
+          },
           "file_name": {
             "type": "string",
             "description": "Display name of the uploaded file",
@@ -525,7 +721,11 @@
         "description": "Reference object for an artifact (lightweight)",
         "required": ["artifact_id", "file_display_name"],
         "properties": {
-          "artifact_id": { "type": "integer", "format": "int32", "example": 5001 },
+          "artifact_id": {
+            "type": "integer",
+            "format": "int32",
+            "example": 5001
+          },
           "file_display_name": { "type": "string", "example": "receipt.pdf" }
         }
       },
@@ -550,14 +750,22 @@
             "description": "Optional national ID or identification number.",
             "example": "ID123456789"
           },
-          "name": { "type": "string", "description": "Full name of the user.", "example": "John Doe" },
+          "name": {
+            "type": "string",
+            "description": "Full name of the user.",
+            "example": "John Doe"
+          },
           "password": {
             "type": "string",
             "format": "password",
             "description": "Password for the account.",
             "example": "secret123"
           },
-          "user_name": { "type": "string", "description": "Unique username for the user.", "example": "john_doe" }
+          "user_name": {
+            "type": "string",
+            "description": "Unique username for the user.",
+            "example": "john_doe"
+          }
         }
       },
       "Estate": {
@@ -581,8 +789,16 @@
             "description": "Notable landmark near the estate.",
             "example": "Near the big mall"
           },
-          "location": { "type": "string", "description": "Location of the estate.", "example": "Durban" },
-          "name": { "type": "string", "description": "Name of the estate.", "example": "Sunrise Estate" }
+          "location": {
+            "type": "string",
+            "description": "Location of the estate.",
+            "example": "Durban"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the estate.",
+            "example": "Sunrise Estate"
+          }
         }
       },
       "EstateCreationRequest": {
@@ -600,8 +816,16 @@
             "description": "Notable landmark near the estate.",
             "example": "Near the big mall"
           },
-          "location": { "type": "string", "description": "Location of the estate.", "example": "Durban" },
-          "name": { "type": "string", "description": "Name of the estate.", "example": "Sunrise Estate" }
+          "location": {
+            "type": "string",
+            "description": "Location of the estate.",
+            "example": "Durban"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the estate.",
+            "example": "Sunrise Estate"
+          }
         }
       },
       "EstateList": {
@@ -632,8 +856,16 @@
             "description": "Filter by estate ID.",
             "example": 1
           },
-          "phase": { "type": ["string", "null"], "description": "Filter by estate phase.", "example": "Phase 1" },
-          "plot_number": { "type": ["string", "null"], "description": "Filter by plot number.", "example": "P-101" }
+          "phase": {
+            "type": ["string", "null"],
+            "description": "Filter by estate phase.",
+            "example": "Phase 1"
+          },
+          "plot_number": {
+            "type": ["string", "null"],
+            "description": "Filter by plot number.",
+            "example": "P-101"
+          }
         }
       },
       "ListUsersRequest": {
@@ -679,7 +911,11 @@
             "description": "The user's password.",
             "example": "secret123"
           },
-          "username": { "type": "string", "description": "The username of the user.", "example": "john_doe" }
+          "username": {
+            "type": "string",
+            "description": "The username of the user.",
+            "example": "john_doe"
+          }
         }
       },
       "Ownership": {
@@ -695,12 +931,28 @@
           "monthly_repayment_amount"
         ],
         "properties": {
-          "contract_start_date": { "type": ["string", "null"], "format": "date", "example": "2025-06-01" },
-          "monthly_repayment_amount": { "type": "integer", "format": "int32", "example": 50000 },
-          "ownership_id": { "type": "integer", "format": "int32", "example": 1001 },
+          "contract_start_date": {
+            "type": ["string", "null"],
+            "format": "date",
+            "example": "2025-06-01"
+          },
+          "monthly_repayment_amount": {
+            "type": "integer",
+            "format": "int32",
+            "example": 50000
+          },
+          "ownership_id": {
+            "type": "integer",
+            "format": "int32",
+            "example": 1001
+          },
           "plot_id": { "type": "integer", "format": "int32", "example": 101 },
           "state": { "$ref": "#/components/schemas/OwnershipState" },
-          "total_sale_value": { "type": "integer", "format": "int32", "example": 5000000 },
+          "total_sale_value": {
+            "type": "integer",
+            "format": "int32",
+            "example": 5000000
+          },
           "user_id": { "type": "integer", "format": "int32", "example": 101 },
           "user_name": { "type": "string", "example": "john_doe" }
         }
@@ -708,27 +960,69 @@
       "OwnershipCreationRequest": {
         "type": "object",
         "description": "Request for creating a new ownership.",
-        "required": ["user_id", "plot_id", "state", "total_sale_value", "monthly_repayment_amount"],
+        "required": [
+          "user_id",
+          "plot_id",
+          "state",
+          "total_sale_value",
+          "monthly_repayment_amount"
+        ],
         "properties": {
-          "contract_start_date": { "type": ["string", "null"], "format": "date", "example": "2025-06-01" },
-          "monthly_repayment_amount": { "type": "integer", "format": "int32", "example": 50000 },
+          "contract_start_date": {
+            "type": ["string", "null"],
+            "format": "date",
+            "example": "2025-06-01"
+          },
+          "monthly_repayment_amount": {
+            "type": "integer",
+            "format": "int32",
+            "example": 50000
+          },
           "plot_id": { "type": "integer", "format": "int32", "example": 101 },
           "state": { "$ref": "#/components/schemas/OwnershipState" },
-          "total_sale_value": { "type": "integer", "format": "int32", "example": 5000000 },
+          "total_sale_value": {
+            "type": "integer",
+            "format": "int32",
+            "example": 5000000
+          },
           "user_id": { "type": "integer", "format": "int32", "example": 101 }
         }
       },
-      "OwnershipState": { "type": "string", "enum": ["PendingContract", "ActivePayment", "Paid", "Defaulted"] },
+      "OwnershipState": {
+        "type": "string",
+        "enum": ["PendingContract", "ActivePayment", "Paid", "Defaulted"]
+      },
       "OwnershipUpdateRequest": {
         "type": "object",
         "description": "Request for updating an ownership.",
         "required": ["ownership_id"],
         "properties": {
-          "contract_start_date": { "type": ["string", "null"], "format": "date", "example": "2025-06-01" },
-          "monthly_repayment_amount": { "type": ["integer", "null"], "format": "int32", "example": 50000 },
-          "ownership_id": { "type": "integer", "format": "int32", "example": 1001 },
-          "state": { "oneOf": [{ "type": "null" }, { "$ref": "#/components/schemas/OwnershipState" }] },
-          "total_sale_value": { "type": ["integer", "null"], "format": "int32", "example": 5000000 }
+          "contract_start_date": {
+            "type": ["string", "null"],
+            "format": "date",
+            "example": "2025-06-01"
+          },
+          "monthly_repayment_amount": {
+            "type": ["integer", "null"],
+            "format": "int32",
+            "example": 50000
+          },
+          "ownership_id": {
+            "type": "integer",
+            "format": "int32",
+            "example": 1001
+          },
+          "state": {
+            "oneOf": [
+              { "type": "null" },
+              { "$ref": "#/components/schemas/OwnershipState" }
+            ]
+          },
+          "total_sale_value": {
+            "type": ["integer", "null"],
+            "format": "int32",
+            "example": 5000000
+          }
         }
       },
       "Payment": {
@@ -747,11 +1041,32 @@
         "properties": {
           "amount": { "type": "integer", "format": "int32", "example": 50000 },
           "comment": { "type": "string", "example": "Payment for May 2025" },
-          "date": { "type": "string", "format": "date", "example": "2025-06-01" },
-          "last_changed_by_user": { "type": "integer", "format": "int32", "example": 101 },
-          "ownership_id": { "type": "integer", "format": "int32", "example": 2001 },
-          "payment_id": { "type": "integer", "format": "int32", "example": 1001 },
-          "proof_of_payment": { "oneOf": [{ "type": "null" }, { "$ref": "#/components/schemas/ArtifactReference" }] },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "example": "2025-06-01"
+          },
+          "last_changed_by_user": {
+            "type": "integer",
+            "format": "int32",
+            "example": 101
+          },
+          "ownership_id": {
+            "type": "integer",
+            "format": "int32",
+            "example": 2001
+          },
+          "payment_id": {
+            "type": "integer",
+            "format": "int32",
+            "example": 1001
+          },
+          "proof_of_payment": {
+            "oneOf": [
+              { "type": "null" },
+              { "$ref": "#/components/schemas/ArtifactReference" }
+            ]
+          },
           "reference": { "type": "string", "example": "REF123456" },
           "state": { "$ref": "#/components/schemas/PaymentState" }
         }
@@ -759,23 +1074,54 @@
       "PaymentCreationRequest": {
         "type": "object",
         "description": "Request for creating a new payment.",
-        "required": ["ownership_id", "date", "amount", "reference", "user_creating_payment"],
+        "required": [
+          "ownership_id",
+          "date",
+          "amount",
+          "reference",
+          "user_creating_payment"
+        ],
         "properties": {
           "amount": { "type": "integer", "format": "int32", "example": 50000 },
-          "date": { "type": "string", "format": "date", "example": "2025-06-01" },
-          "ownership_id": { "type": "integer", "format": "int32", "example": 2001 },
-          "proof_of_payment_file": { "oneOf": [{ "type": "null" }, { "$ref": "#/components/schemas/ArtifactFile" }] },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "example": "2025-06-01"
+          },
+          "ownership_id": {
+            "type": "integer",
+            "format": "int32",
+            "example": 2001
+          },
+          "proof_of_payment_file": {
+            "oneOf": [
+              { "type": "null" },
+              { "$ref": "#/components/schemas/ArtifactFile" }
+            ]
+          },
           "reference": { "type": "string", "example": "REF123456" },
-          "user_creating_payment": { "type": "integer", "format": "int32", "example": 101 }
+          "user_creating_payment": {
+            "type": "integer",
+            "format": "int32",
+            "example": 101
+          }
         }
       },
       "PaymentList": {
         "type": "object",
         "description": "List wrapper for payments",
         "required": ["payments"],
-        "properties": { "payments": { "type": "array", "items": { "$ref": "#/components/schemas/Payment" } } }
+        "properties": {
+          "payments": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Payment" }
+          }
+        }
       },
-      "PaymentState": { "type": "string", "enum": ["PendingApproval", "Approved", "Rejected"] },
+      "PaymentState": {
+        "type": "string",
+        "enum": ["PendingApproval", "Approved", "Rejected"]
+      },
       "PermissionType": {
         "type": "string",
         "enum": [
@@ -794,7 +1140,14 @@
       "Plot": {
         "type": "object",
         "description": "Represents a plot of land within an estate.",
-        "required": ["plot_id", "estate_id", "plot_number", "phase", "length", "width"],
+        "required": [
+          "plot_id",
+          "estate_id",
+          "plot_number",
+          "phase",
+          "length",
+          "width"
+        ],
         "properties": {
           "estate_id": {
             "type": "integer",
@@ -808,14 +1161,22 @@
             "description": "Length of the plot in meters.",
             "example": 40
           },
-          "phase": { "type": "string", "description": "Phase of the estate the plot is in.", "example": "Phase 1" },
+          "phase": {
+            "type": "string",
+            "description": "Phase of the estate the plot is in.",
+            "example": "Phase 1"
+          },
           "plot_id": {
             "type": "integer",
             "format": "int32",
             "description": "Unique identifier of the plot.",
             "example": 101
           },
-          "plot_number": { "type": "string", "description": "Plot number identifier.", "example": "P-101" },
+          "plot_number": {
+            "type": "string",
+            "description": "Plot number identifier.",
+            "example": "P-101"
+          },
           "width": {
             "type": "integer",
             "format": "int32",
@@ -841,8 +1202,16 @@
             "description": "Length of the plot in meters.",
             "example": 40
           },
-          "phase": { "type": "string", "description": "Phase of the estate.", "example": "Phase 1" },
-          "plot_number": { "type": "string", "description": "Plot number identifier.", "example": "P-101" },
+          "phase": {
+            "type": "string",
+            "description": "Phase of the estate.",
+            "example": "Phase 1"
+          },
+          "plot_number": {
+            "type": "string",
+            "description": "Plot number identifier.",
+            "example": "P-101"
+          },
           "width": {
             "type": "integer",
             "format": "int32",
@@ -868,8 +1237,15 @@
         "description": "Request to update payment state with optional comment.",
         "required": ["payment_id", "state", "comment"],
         "properties": {
-          "comment": { "type": "string", "example": "Marked as completed after verification" },
-          "payment_id": { "type": "integer", "format": "int32", "example": 1001 },
+          "comment": {
+            "type": "string",
+            "example": "Marked as completed after verification"
+          },
+          "payment_id": {
+            "type": "integer",
+            "format": "int32",
+            "example": 1001
+          },
           "state": { "$ref": "#/components/schemas/PaymentState" }
         }
       },
@@ -899,7 +1275,11 @@
             "description": "If the user is an employee",
             "example": "false"
           },
-          "name": { "type": ["string", "null"], "description": "Full name of the user.", "example": "John Doe" },
+          "name": {
+            "type": ["string", "null"],
+            "description": "Full name of the user.",
+            "example": "John Doe"
+          },
           "password": {
             "type": ["string", "null"],
             "format": "password",
@@ -928,7 +1308,13 @@
       "User": {
         "type": "object",
         "description": "A fully populated user as stored in the database.",
-        "required": ["user_id", "username", "name", "permissions", "is_employee"],
+        "required": [
+          "user_id",
+          "username",
+          "name",
+          "permissions",
+          "is_employee"
+        ],
         "properties": {
           "cellphone_number": {
             "type": ["string", "null"],
@@ -946,25 +1332,57 @@
             "description": "Optional ID number.",
             "example": "ID123456789"
           },
-          "is_employee": { "type": "boolean", "description": "If user is an employee", "example": "false" },
-          "name": { "type": "string", "description": "Full name.", "example": "John Doe" },
+          "is_employee": {
+            "type": "boolean",
+            "description": "If user is an employee",
+            "example": "false"
+          },
+          "name": {
+            "type": "string",
+            "description": "Full name.",
+            "example": "John Doe"
+          },
           "permissions": {
             "type": "array",
             "items": { "$ref": "#/components/schemas/PermissionType" },
             "description": "List of user permissions",
             "example": "[ViewPayments, ModifyProperties]"
           },
-          "user_id": { "type": "integer", "format": "int32", "description": "Unique user ID.", "example": 101 },
-          "username": { "type": "string", "description": "The username.", "example": "john_doe" }
+          "user_id": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Unique user ID.",
+            "example": 101
+          },
+          "username": {
+            "type": "string",
+            "description": "The username.",
+            "example": "john_doe"
+          }
         }
       }
     }
   },
   "tags": [
-    { "name": "User Management", "description": "Operations related to user authentication and management" },
-    { "name": "Property Management", "description": "Operations related to estates, plots, and ownership" },
-    { "name": "Payment Management", "description": "Operations related to payment tracking and updates" },
-    { "name": "Artifact Management", "description": "Operations related to archival of artifacts" },
-    { "name": "Health Check", "description": "Operations related to health of the service" }
+    {
+      "name": "User Management",
+      "description": "Operations related to user authentication and management"
+    },
+    {
+      "name": "Property Management",
+      "description": "Operations related to estates, plots, and ownership"
+    },
+    {
+      "name": "Payment Management",
+      "description": "Operations related to payment tracking and updates"
+    },
+    {
+      "name": "Artifact Management",
+      "description": "Operations related to archival of artifacts"
+    },
+    {
+      "name": "Health Check",
+      "description": "Operations related to health of the service"
+    }
   ]
 }

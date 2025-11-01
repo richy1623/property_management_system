@@ -84,13 +84,29 @@ pub struct PlotList {
 
 mod converter {
     use super::*;
-    use crate::service::property_management::property_management_proto::{
-        GetPlotsRequest as ProtoGetPlotsRequest, Plot as ProtoPlot,
-        PlotCreationRequest as ProtoPlotCreationRequest, PlotList as ProtoPlotList,
+    use crate::{
+        db::model::plot::Plot as PlotModel,
+        service::property_management::property_management_proto::{
+            GetPlotsRequest as ProtoGetPlotsRequest, Plot as ProtoPlot,
+            PlotCreationRequest as ProtoPlotCreationRequest, PlotList as ProtoPlotList,
+        },
     };
     impl From<Plot> for ProtoPlot {
         fn from(plot: Plot) -> Self {
             ProtoPlot {
+                plot_id: plot.plot_id,
+                estate_id: plot.estate_id,
+                plot_number: plot.plot_number,
+                phase: plot.phase,
+                length: plot.length,
+                width: plot.width,
+            }
+        }
+    }
+
+    impl From<PlotModel> for Plot {
+        fn from(plot: PlotModel) -> Self {
+            Plot {
                 plot_id: plot.plot_id,
                 estate_id: plot.estate_id,
                 plot_number: plot.plot_number,

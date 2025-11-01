@@ -5,13 +5,17 @@ use crate::{
         AppServices,
         model::plot::{GetPlotsRequest, Plot, PlotCreationRequest, PlotList},
     },
+    db::model::{
+        ownership::Ownership as OwnershipModel, plot::Plot as PlotModel, user::User as UserModel,
+        user_permission::PermissionType,
+    },
     service::property_management::property_management_proto::{
         GetPlotsRequest as ProtoGetPlotsRequest, PlotCreationRequest as ProtoPlotCreationRequest,
         property_management_server::PropertyManagement,
     },
 };
-use actix_web::Result;
 use actix_web::{HttpRequest, HttpResponse, Responder, web};
+use actix_web::{Result, error::ErrorUnauthorized};
 
 /// Create a new plot within an estate
 ///
@@ -105,6 +109,72 @@ pub async fn list_plots(
             Ok(crate::api::map_grpc_error_to_http_response(status))
         }
     }
+}
+
+/// Fetch a plot with a given plot ID
+///
+/// Returns the plot matching the plot ID.
+/// Authorization: bearer token.
+#[utoipa::path(
+    get,
+    path = "/api/plot/{plot_id}",
+    params(
+        ("plot_id" = i32, Path, description = "The ID of the plot record to retrieve",
+        example = 42)
+    ),
+    responses(
+        (status = 200, description = "The desired Plot", body = Plot),
+        (status = 400, description = "Missing or invalid input"),
+        (status = 401, description = "Unauthorized")
+    ),
+    security(
+        ("bearerAuth" = [])
+    ),
+    tag = "Property Management"
+)]
+pub async fn get_plot(
+    services: web::Data<Arc<AppServices>>,
+    http_request: HttpRequest,
+    path: web::Path<i32>,
+) -> Result<impl Responder> {
+    let authorization_header = crate::api::extract_authorization_header(&http_request)?;
+
+    let plot_id = path.into_inner();
+
+    // Decode and validate JWT
+    let jwt_token = services
+        .archive_management_service
+        .clone()
+        .jwt
+        .decode_jwt_token(&authorization_header)?;
+
+    let mut conn = super::get_database_connection(
+        services
+            .archive_management_service
+            .database_connection_pool
+            .clone(),
+    )?;
+
+    // Get Plot
+    let plot = PlotModel::get_plot(&mut conn, plot_id)?;
+
+    let user_making_request = UserModel::get_user_by_user_name(&mut conn, &jwt_token.claims.sub)?;
+    let ownerships =
+        OwnershipModel::get_all_ownerships_for_user_id(&mut conn, user_making_request.user_id)?;
+
+    if !jwt_token
+        .claims
+        .permissions
+        .contains(&PermissionType::ViewProperties.to_string())
+        && ownerships
+            .iter()
+            .find(|ownership| ownership.plot_id == plot_id)
+            .is_none()
+    {
+        return Err(ErrorUnauthorized("Insufficient permissions to view plots"));
+    }
+
+    Ok(HttpResponse::Ok().json(Plot::from(plot)))
 }
 
 #[cfg(test)]
@@ -239,8 +309,6 @@ mod tests {
         )
         .expect("Failed to read JSON file");
 
-        dbg!(&json_payload);
-
         let jwt_token = jwt.encode_jwt_token(
             ClaimsBuilder::new("admin")
                 .permission(PermissionType::ViewProperties.to_string())
@@ -268,5 +336,104 @@ mod tests {
                 .collect::<Vec<String>>(),
             vec!["PN-1", "PN-2"]
         );
+    }
+
+    #[rstest]
+    #[actix_web::test]
+    async fn test_get_plot(
+        test_services: &(
+            AppServices,
+            Jwt,
+            SecureStorage,
+            Pool<ConnectionManager<PgConnection>>,
+        ),
+    ) {
+        let (services, jwt, _secure_storage, pool) = test_services.clone();
+        let mut conn = pool.get().unwrap();
+
+        let app_services = Arc::new(services);
+        let app = test::init_service(
+            App::new()
+                .app_data(actix_web::web::Data::new(app_services.clone()))
+                .route("/api/plot/{plot_id}", web::get().to(get_plot)),
+        )
+        .await;
+
+        // Create database entries
+        let estate = crate::db::model::tests::create_test_estate(&mut conn);
+        let plot_1 =
+            PlotModel::create_plot(&mut conn, estate.estate_id, "PN-1", "Phase 1", 20, 30).unwrap();
+        let user = crate::db::model::tests::create_test_user(&mut conn);
+        crate::db::model::tests::create_test_ownership(&mut conn, &plot_1, &user);
+
+        let jwt_token = jwt.encode_jwt_token(ClaimsBuilder::new(&user.user_name).build());
+
+        let req = test::TestRequest::get()
+            .uri(&format!("/api/plot/{}", plot_1.plot_id))
+            .insert_header(("Content-Type", "application/json"))
+            .insert_header(("Authorization", format!("Bearer {jwt_token}")))
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+
+        // Assert: Check HTTP status code and returned payload
+        assert_eq!(resp.status(), StatusCode::OK);
+        let response_json: Plot = test::read_body_json(resp).await;
+        assert_eq!(response_json, plot_1.into());
+
+        // Check no such plot
+        let req = test::TestRequest::get()
+            .uri(&format!("/api/plot/{}", 99999999))
+            .insert_header(("Content-Type", "application/json"))
+            .insert_header(("Authorization", format!("Bearer {jwt_token}")))
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+
+        // Assert: Check HTTP status code and returned payload
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[rstest]
+    #[actix_web::test]
+    async fn test_get_plot_unauthorized(
+        test_services: &(
+            AppServices,
+            Jwt,
+            SecureStorage,
+            Pool<ConnectionManager<PgConnection>>,
+        ),
+    ) {
+        let (services, jwt, _secure_storage, pool) = test_services.clone();
+        let mut conn = pool.get().unwrap();
+
+        let app_services = Arc::new(services);
+        let app = test::init_service(
+            App::new()
+                .app_data(actix_web::web::Data::new(app_services.clone()))
+                .route("/api/plot/{plot_id}", web::get().to(get_plot)),
+        )
+        .await;
+
+        // Create database entries
+        let estate = crate::db::model::tests::create_test_estate(&mut conn);
+        let plot_1 =
+            PlotModel::create_plot(&mut conn, estate.estate_id, "PN-1", "Phase 1", 20, 30).unwrap();
+        let user = crate::db::model::tests::create_test_user(&mut conn);
+        let user_2 = crate::db::model::tests::create_test_user(&mut conn);
+        crate::db::model::tests::create_test_ownership(&mut conn, &plot_1, &user_2);
+
+        let jwt_token = jwt.encode_jwt_token(ClaimsBuilder::new(&user.user_name).build());
+
+        let req = test::TestRequest::get()
+            .uri(&format!("/api/plot/{}", plot_1.plot_id))
+            .insert_header(("Content-Type", "application/json"))
+            .insert_header(("Authorization", format!("Bearer {jwt_token}")))
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+
+        // Assert: Check HTTP status code and returned payload
+        assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
     }
 }
