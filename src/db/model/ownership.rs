@@ -80,6 +80,21 @@ impl Ownership {
             .map_err(Into::into)
     }
 
+    pub fn check_user_owns_ownerships(
+        conn: &mut PgConnection,
+        ownership_ids: &Vec<i32>,
+        user_id: i32,
+    ) -> Result<bool, Error> {
+        ownership::table
+            .filter(ownership::ownership_id.eq_any(ownership_ids))
+            .filter(ownership::user_id.ne(user_id))
+            .limit(1)
+            .count()
+            .get_result::<i64>(conn)
+            .map_err(Into::into)
+            .map(|count| count == 0)
+    }
+
     pub fn get_ownership_for_user_and_plot(
         conn: &mut PgConnection,
         user_id: i32,
@@ -264,6 +279,46 @@ mod tests {
         assert_eq!(
             Ownership::get_all_ownerships_for_user_id(&mut conn, user_other.user_id).unwrap(),
             vec![ownership_other]
+        );
+    }
+
+    #[rstest]
+    pub fn test_user_owns_ownerships(pool: &Pool<ConnectionManager<PgConnection>>) {
+        let mut conn = pool.clone().get().unwrap();
+
+        let estate = crate::db::model::tests::create_test_estate(&mut conn);
+
+        let plot_1 = crate::db::model::tests::create_test_plot(&mut conn, &estate);
+        let plot_2 = crate::db::model::tests::create_test_plot(&mut conn, &estate);
+        let plot_other = crate::db::model::tests::create_test_plot(&mut conn, &estate);
+
+        let user = crate::db::model::tests::create_test_user(&mut conn);
+        let user_other = crate::db::model::tests::create_test_user(&mut conn);
+
+        let ownership_1 = crate::db::model::tests::create_test_ownership(&mut conn, &plot_1, &user);
+        let ownership_2 = crate::db::model::tests::create_test_ownership(&mut conn, &plot_2, &user);
+        let ownership_other =
+            crate::db::model::tests::create_test_ownership(&mut conn, &plot_other, &user_other);
+
+        assert!(
+            Ownership::check_user_owns_ownerships(
+                &mut conn,
+                &vec![ownership_1.ownership_id, ownership_2.ownership_id],
+                user.user_id
+            )
+            .unwrap()
+        );
+        assert!(
+            !Ownership::check_user_owns_ownerships(
+                &mut conn,
+                &vec![
+                    ownership_1.ownership_id,
+                    ownership_2.ownership_id,
+                    ownership_other.ownership_id
+                ],
+                user.user_id
+            )
+            .unwrap()
         );
     }
 

@@ -12,7 +12,7 @@ use crate::api::handler::ownership_handler::{
     create_ownership, get_ownership, get_ownerships, update_ownership,
 };
 use crate::api::handler::payment_handler::{
-    create_payment, get_payments_for_ownership, get_payments_in_state, update_payment_state,
+    create_payment, get_payments_for_ownerships, get_payments_in_state, update_payment_state,
 };
 use crate::api::handler::plot_handler::{create_plot, get_plot, list_plots};
 use crate::api::handler::user_handler::{
@@ -59,7 +59,7 @@ pub fn api_routes(app_services: Arc<AppServices>) -> Scope {
         .service(
             web::scope("/payment")
                 .route("/", web::post().to(create_payment))
-                .route("/ownership", web::get().to(get_payments_for_ownership))
+                .route("/ownership", web::post().to(get_payments_for_ownerships))
                 .route("/state", web::get().to(get_payments_in_state))
                 .route("/update", web::post().to(update_payment_state)),
         )
@@ -109,7 +109,7 @@ pub mod doc {
         ownership_handler::get_ownership,
         ownership_handler::get_ownerships,
         payment_handler::create_payment,
-        payment_handler::get_payments_for_ownership,
+        payment_handler::get_payments_for_ownerships,
         payment_handler::get_payments_in_state,
         payment_handler::update_payment_state,
         artifact_handler::get_artifact,

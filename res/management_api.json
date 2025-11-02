@@ -290,20 +290,22 @@
       }
     },
     "/api/payment/ownership": {
-      "get": {
+      "post": {
         "tags": ["Payment Management"],
         "summary": "Retrieve payments for a given ownership",
-        "description": "Accepts an ownership ID and returns all payments associated with it.\nAuthorization: bearer token.",
-        "operationId": "get_payments_for_ownership",
-        "parameters": [
-          {
-            "name": "ownership_id",
-            "in": "query",
-            "description": "Ownership ID to filter payments by",
-            "required": true,
-            "schema": { "type": "integer", "format": "int32" }
-          }
-        ],
+        "description": "Accepts a list of ownership IDs and returns all payments associated with it.\nAuthorization: bearer token.",
+        "operationId": "get_payments_for_ownerships",
+        "requestBody": {
+          "description": "Ownership IDs to filter payments by",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetOwnershipPaymentsRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "List of payments for ownership",
@@ -837,6 +839,17 @@
             "type": "array",
             "items": { "$ref": "#/components/schemas/Estate" },
             "description": "Collection of estate objects."
+          }
+        }
+      },
+      "GetOwnershipPaymentsRequest": {
+        "type": "object",
+        "required": ["ownership_ids"],
+        "properties": {
+          "ownership_ids": {
+            "type": "array",
+            "items": { "type": "integer", "format": "int32" },
+            "example": "[1001, 1002]"
           }
         }
       },

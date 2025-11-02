@@ -86,9 +86,9 @@ pub struct UpdatePaymentStateRequest {
 }
 
 #[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
-pub struct OwnershipPaymentsQuery {
-    #[schema(example = 1001)]
-    pub ownership_id: i32,
+pub struct GetOwnershipPaymentsRequest {
+    #[schema(example = "[1001, 1002]")]
+    pub ownership_ids: Vec<i32>,
 }
 
 #[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
@@ -106,7 +106,6 @@ mod converter {
     use crate::{
         db::model::{artifact::Artifact as ArtifactModel, payment::Payment as PaymentModel},
         service::payment_management::payment_management_proto::{
-            GetPaymentsForOwnershipRequest as ProtoGetPaymentsForOwnershipRequest,
             GetPaymentsInStateRequest as ProtoGetPaymentsInStateRequest, Payment as ProtoPayment,
             PaymentList as ProtoPaymentList,
             PaymentStateUpdateRequest as ProtoPaymentStateUpdateRequest,
@@ -143,15 +142,6 @@ mod converter {
                 payment_id: payment_state_update_request.payment_id,
                 state: payment_state_update_request.state.into(),
                 comment: payment_state_update_request.comment,
-            }
-        }
-    }
-
-    impl From<(OwnershipPaymentsQuery, String)> for ProtoGetPaymentsForOwnershipRequest {
-        fn from((query, jwt_token): (OwnershipPaymentsQuery, String)) -> Self {
-            Self {
-                jwt_token,
-                ownership_id: query.ownership_id,
             }
         }
     }
@@ -201,14 +191,6 @@ mod converter {
                 payment_id: payment_state_update_request.payment_id,
                 state: payment_state_update_request.state.try_into().unwrap(),
                 comment: payment_state_update_request.comment,
-            }
-        }
-    }
-
-    impl From<ProtoGetPaymentsForOwnershipRequest> for OwnershipPaymentsQuery {
-        fn from(get_payments_for_ownership_request: ProtoGetPaymentsForOwnershipRequest) -> Self {
-            Self {
-                ownership_id: get_payments_for_ownership_request.ownership_id,
             }
         }
     }

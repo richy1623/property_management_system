@@ -109,12 +109,12 @@ impl Payment {
             .map_err(Into::into)
     }
 
-    pub fn get_all_payments_for_ownership_id(
+    pub fn get_all_payments_for_ownerships(
         conn: &mut PgConnection,
-        ownership_id: i32,
+        ownership_ids: &Vec<i32>,
     ) -> Result<Vec<Payment>, Error> {
         payment::table
-            .filter(payment::ownership_id.eq(ownership_id))
+            .filter(payment::ownership_id.eq_any(ownership_ids))
             .select(Payment::as_select())
             .get_results(conn)
             .map_err(Into::into)
@@ -307,14 +307,22 @@ mod tests {
             crate::db::model::tests::create_test_payment(&mut conn, &ownership_2, &user_2);
 
         assert_eq!(
-            Payment::get_all_payments_for_ownership_id(&mut conn, ownership_1.ownership_id)
+            Payment::get_all_payments_for_ownerships(&mut conn, &vec![ownership_1.ownership_id])
                 .unwrap(),
-            vec![payment_1, payment_2]
+            vec![payment_1.clone(), payment_2.clone()]
         );
         assert_eq!(
-            Payment::get_all_payments_for_ownership_id(&mut conn, ownership_2.ownership_id)
+            Payment::get_all_payments_for_ownerships(&mut conn, &vec![ownership_2.ownership_id])
                 .unwrap(),
-            vec![payment_3]
+            vec![payment_3.clone()]
+        );
+        assert_eq!(
+            Payment::get_all_payments_for_ownerships(
+                &mut conn,
+                &vec![ownership_1.ownership_id, ownership_2.ownership_id]
+            )
+            .unwrap(),
+            vec![payment_1.clone(), payment_2.clone(), payment_3.clone()]
         );
     }
 

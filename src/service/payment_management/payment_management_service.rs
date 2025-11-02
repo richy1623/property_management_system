@@ -147,9 +147,9 @@ impl PaymentManagement for PaymentManagementService {
             ));
         }
 
-        let payments = PaymentModel::get_all_payments_for_ownership_id(
+        let payments = PaymentModel::get_all_payments_for_ownerships(
             &mut conn,
-            get_payments_request.ownership_id,
+            &vec![get_payments_request.ownership_id],
         )?;
 
         let payments = payments
@@ -260,7 +260,7 @@ mod tests {
             .into_inner();
 
         let payment_inserted: Payment =
-            PaymentModel::get_all_payments_for_ownership_id(&mut conn, ownership.ownership_id)
+            PaymentModel::get_all_payments_for_ownerships(&mut conn, &vec![ownership.ownership_id])
                 .unwrap()
                 .get(0)
                 .unwrap()

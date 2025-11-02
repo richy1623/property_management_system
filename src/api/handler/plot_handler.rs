@@ -293,11 +293,14 @@ mod tests {
         let estate = crate::db::model::tests::create_test_estate(&mut conn);
 
         let plot_1 =
-            PlotModel::create_plot(&mut conn, estate.estate_id, "PN-1", "Phase 1", 20, 30).unwrap();
+            PlotModel::create_plot(&mut conn, estate.estate_id, "LS-PN-1", "Phase LS", 20, 30)
+                .unwrap();
         let plot_2 =
-            PlotModel::create_plot(&mut conn, estate.estate_id, "PN-2", "Phase 1", 25, 35).unwrap();
+            PlotModel::create_plot(&mut conn, estate.estate_id, "LS-PN-2", "Phase LS", 25, 35)
+                .unwrap();
         let _plot_3 =
-            PlotModel::create_plot(&mut conn, estate.estate_id, "PN-3", "Phase 1", 25, 35).unwrap();
+            PlotModel::create_plot(&mut conn, estate.estate_id, "LS-PN-3", "Phase LS", 25, 35)
+                .unwrap();
 
         let user = crate::db::model::tests::create_test_user(&mut conn);
         crate::db::model::tests::create_test_ownership(&mut conn, &plot_1, &user);
@@ -334,7 +337,7 @@ mod tests {
                 .iter()
                 .map(|plot| plot.plot_number.clone())
                 .collect::<Vec<String>>(),
-            vec!["PN-1", "PN-2"]
+            vec!["LS-PN-1", "LS-PN-2"]
         );
     }
 

@@ -4,7 +4,7 @@ use crate::{
     api::{
         AppServices,
         model::payment::{
-            OwnershipPaymentsQuery, Payment, PaymentCreationRequest, PaymentList,
+            GetOwnershipPaymentsRequest, Payment, PaymentCreationRequest, PaymentList,
             PaymentsInStateQuery, UpdatePaymentStateRequest,
         },
     },
@@ -27,15 +27,13 @@ use uuid::Uuid;
 
 /// Retrieve payments for a given ownership
 ///
-/// Accepts an ownership ID and returns all payments associated with it.  
+/// Accepts a list of ownership IDs and returns all payments associated with it.
 /// Authorization: bearer token.
 #[utoipa::path(
-    get,
+    post,
     path = "/api/payment/ownership",
     tag = "Payment Management",
-    params(
-        ("ownership_id" = i32, Query, description = "Ownership ID to filter payments by")
-    ),
+    request_body(content = GetOwnershipPaymentsRequest, description = "Ownership IDs to filter payments by"),
     security(
         ("bearerAuth" = [])
     ),
@@ -45,14 +43,14 @@ use uuid::Uuid;
         (status = 401, description = "Unauthorized")
     )
 )]
-pub async fn get_payments_for_ownership(
+pub async fn get_payments_for_ownerships(
     services: web::Data<Arc<AppServices>>,
     http_request: HttpRequest,
-    query: web::Query<OwnershipPaymentsQuery>,
+    payload: web::Json<GetOwnershipPaymentsRequest>,
 ) -> Result<impl Responder> {
     let authorization_header = crate::api::extract_authorization_header(&http_request)?;
 
-    let get_payments_request = query.into_inner();
+    let get_payments_request = payload.into_inner();
 
     let mut conn = super::get_database_connection(
         services
@@ -67,23 +65,26 @@ pub async fn get_payments_for_ownership(
         .jwt
         .decode_jwt_token(&authorization_header)?;
 
-    let ownership = OwnershipModel::get_ownership(&mut conn, get_payments_request.ownership_id)?;
-    let user = UserModel::get_user_by_user_id(&mut conn, ownership.user_id)?;
+    let user = UserModel::get_user_by_user_name(&mut conn, &jwt_token.claims.sub)?;
 
-    if jwt_token.claims.sub != user.user_name
-        && !jwt_token
-            .claims
-            .permissions
-            .contains(&PermissionType::ViewPayments.to_string())
+    if !jwt_token
+        .claims
+        .permissions
+        .contains(&PermissionType::ViewPayments.to_string())
+        && !OwnershipModel::check_user_owns_ownerships(
+            &mut conn,
+            &get_payments_request.ownership_ids,
+            user.user_id,
+        )?
     {
         return Err(ErrorUnauthorized(
             "Insufficient permissions to view payments",
         ));
     }
 
-    let payments = PaymentModel::get_all_payments_for_ownership_id(
+    let payments = PaymentModel::get_all_payments_for_ownerships(
         &mut conn,
-        get_payments_request.ownership_id,
+        &get_payments_request.ownership_ids,
     )?;
 
     Ok(HttpResponse::Ok().json(PaymentList {
@@ -105,7 +106,7 @@ pub async fn get_payments_for_ownership(
 
 /// Retrieve payments filtered by state
 ///
-/// Accepts a payment state and returns matching payments, with optional pagination using offset and limit.  
+/// Accepts a payment state and returns matching payments, with optional pagination using offset and limit.
 /// Authorization: bearer token.
 #[utoipa::path(
     get,
@@ -182,8 +183,8 @@ pub async fn get_payments_in_state(
 
 /// Update the state and comment of a payment
 ///
-/// Accepts the payment ID, new state, and an optional comment,  
-/// and updates the corresponding payment record in the system.  
+/// Accepts the payment ID, new state, and an optional comment,
+/// and updates the corresponding payment record in the system.
 /// Authorization: bearer token.
 #[utoipa::path(
     post,
@@ -366,7 +367,7 @@ mod tests {
 
     #[rstest]
     #[actix_web::test]
-    async fn test_get_payments_for_ownership(
+    async fn test_get_payments_for_ownerships(
         test_services: &(
             AppServices,
             Jwt,
@@ -383,7 +384,7 @@ mod tests {
                 .app_data(actix_web::web::Data::new(app_services.clone()))
                 .route(
                     "/api/payment/ownership",
-                    web::get().to(get_payments_for_ownership),
+                    web::post().to(get_payments_for_ownerships),
                 ),
         )
         .await;
@@ -394,42 +395,16 @@ mod tests {
         let user = crate::db::model::tests::create_test_user(&mut conn);
         let ownership_1 = crate::db::model::tests::create_test_ownership(&mut conn, &plot, &user);
         let ownership_2 = crate::db::model::tests::create_test_ownership(&mut conn, &plot, &user);
-        let payment_1 = PaymentModel::create_payment(
-            &mut conn,
-            ownership_1.ownership_id,
-            NaiveDate::from_ymd_opt(2025, 09, 05).unwrap(),
-            10,
-            PaymentState::Approved,
-            "comment",
-            "01",
-            1,
-            None,
-        )
-        .unwrap();
-        let payment_2 = PaymentModel::create_payment(
-            &mut conn,
-            ownership_2.ownership_id,
-            NaiveDate::from_ymd_opt(2025, 09, 05).unwrap(),
-            10,
-            PaymentState::Approved,
-            "comment",
-            "02",
-            1,
-            None,
-        )
-        .unwrap();
-        let payment_3 = PaymentModel::create_payment(
-            &mut conn,
-            ownership_1.ownership_id,
-            NaiveDate::from_ymd_opt(2025, 09, 05).unwrap(),
-            10,
-            PaymentState::Rejected,
-            "comment",
-            "03",
-            1,
-            None,
-        )
-        .unwrap();
+        let ownership_3 = crate::db::model::tests::create_test_ownership(&mut conn, &plot, &user);
+
+        let payment_1 =
+            crate::db::model::tests::create_test_payment(&mut conn, &ownership_1, &user);
+        let payment_2 =
+            crate::db::model::tests::create_test_payment(&mut conn, &ownership_1, &user);
+        let payment_3 =
+            crate::db::model::tests::create_test_payment(&mut conn, &ownership_2, &user);
+        let payment_4 =
+            crate::db::model::tests::create_test_payment(&mut conn, &ownership_3, &user);
 
         // Act: Send http request
         let jwt_token = jwt.encode_jwt_token(
@@ -438,12 +413,25 @@ mod tests {
                 .build(),
         );
 
-        let req = test::TestRequest::get()
-            .uri(&format!(
-                "/api/payment/ownership?ownership_id={}",
-                ownership_1.ownership_id.to_string()
-            ))
+        // Act: Send http request
+        let request_payload = fs::read_to_string(
+            "tests/resources/api/payload/payment_management/request/get_payments_in_ownerships.json",
+        )
+        .unwrap();
+
+        let request_payload = request_payload.replace(
+            "\"{{ownership_ids}}\"",
+            &format!(
+                "[{},{}]",
+                ownership_1.ownership_id, ownership_2.ownership_id
+            ),
+        );
+
+        let req = test::TestRequest::post()
+            .uri("/api/payment/ownership")
             .insert_header(("Authorization", format!("Bearer {jwt_token}")))
+            .insert_header(("Content-Type", "application/json"))
+            .set_payload(request_payload)
             .to_request();
 
         let resp = test::call_service(&app, req).await;
@@ -457,8 +445,9 @@ mod tests {
             .map(|payment| payment.payment_id)
             .collect();
         assert!(response_payment_ids.contains(&payment_1.payment_id));
-        assert!(!response_payment_ids.contains(&payment_2.payment_id));
+        assert!(response_payment_ids.contains(&payment_2.payment_id));
         assert!(response_payment_ids.contains(&payment_3.payment_id));
+        assert!(!response_payment_ids.contains(&payment_4.payment_id));
     }
 
     #[rstest]
