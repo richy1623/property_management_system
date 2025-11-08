@@ -1,5 +1,6 @@
-use crate::db::schema::artifact;
+use crate::db::schema::artifact::{self};
 use diesel::prelude::*;
+use sanitize_filename::sanitize;
 use serde::{Deserialize, Serialize};
 
 use crate::error::Error;
@@ -27,6 +28,7 @@ impl Artifact {
         uploaded_by: i32,
         is_temporary: bool,
     ) -> Result<Artifact, Error> {
+        let file_display_name = sanitize(file_display_name);
         diesel::insert_into(artifact::table)
             .values((
                 artifact::file_display_name.eq(file_display_name),
