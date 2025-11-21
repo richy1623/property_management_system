@@ -29,6 +29,10 @@ pub struct Plot {
     /// Width of the plot in meters.
     #[schema(example = 30)]
     pub width: i32,
+
+    /// Width of the plot in meters.
+    #[schema(example = "ActivePayment")]
+    pub current_ownership_status: Option<OwnershipState>,
 }
 
 /// Request to create a new plot in an estate.
@@ -104,15 +108,30 @@ mod converter {
         }
     }
 
-    impl From<PlotModel> for Plot {
-        fn from(plot: PlotModel) -> Self {
+    impl From<(&PlotModel, Option<OwnershipState>)> for Plot {
+        fn from((plot, current_ownership_status): (&PlotModel, Option<OwnershipState>)) -> Self {
             Plot {
                 plot_id: plot.plot_id,
                 estate_id: plot.estate_id,
-                plot_number: plot.plot_number,
-                phase: plot.phase,
+                plot_number: plot.plot_number.clone(),
+                phase: plot.phase.clone(),
                 length: plot.length,
                 width: plot.width,
+                current_ownership_status: current_ownership_status,
+            }
+        }
+    }
+
+    impl From<&PlotModel> for Plot {
+        fn from(plot: &PlotModel) -> Self {
+            Plot {
+                plot_id: plot.plot_id,
+                estate_id: plot.estate_id,
+                plot_number: plot.plot_number.clone(),
+                phase: plot.phase.clone(),
+                length: plot.length,
+                width: plot.width,
+                current_ownership_status: None,
             }
         }
     }
@@ -156,6 +175,7 @@ mod converter {
                 phase: p.phase,
                 length: p.length,
                 width: p.width,
+                current_ownership_status: None,
             }
         }
     }

@@ -11,6 +11,7 @@ use crate::error::Error;
 #[derive(
     Debug,
     Clone,
+    Copy,
     PartialEq,
     Eq,
     DbEnum,

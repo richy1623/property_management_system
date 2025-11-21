@@ -1162,6 +1162,15 @@
           "width"
         ],
         "properties": {
+          "current_ownership_status": {
+            "oneOf": [
+              { "type": "null" },
+              {
+                "$ref": "#/components/schemas/OwnershipState",
+                "description": "Width of the plot in meters."
+              }
+            ]
+          },
           "estate_id": {
             "type": "integer",
             "format": "int32",

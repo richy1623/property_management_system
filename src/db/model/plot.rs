@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -96,10 +98,38 @@ impl Plot {
             .get_results(conn)
             .map_err(Into::into)
     }
+
+    pub fn get_ownership_states_for_plots(
+        conn: &mut PgConnection,
+        plots: Vec<Plot>,
+    ) -> Result<Vec<(Plot, Option<OwnershipState>)>, Error> {
+        let mut plot_map: HashMap<i32, Plot> = plots.into_iter().map(|p| (p.plot_id, p)).collect();
+        let plot_ids = plot_map.keys();
+        plot::table
+            .left_join(ownership::table)
+            .filter(plot::plot_id.eq_any(plot_ids))
+            .select((plot::plot_id, ownership::state.nullable()))
+            .distinct_on(plot::plot_id)
+            .order_by(plot::plot_id.asc())
+            .then_order_by(ownership::contract_start_date.desc())
+            .load::<(i32, Option<OwnershipState>)>(conn)
+            .map_err(Into::into)
+            .map(|plots_and_ownerships| {
+                plots_and_ownerships
+                    .into_iter()
+                    .map(|(plot_id, ownership_state)| {
+                        (plot_map.remove(&plot_id).unwrap(), ownership_state)
+                    })
+                    .collect::<Vec<(Plot, Option<OwnershipState>)>>()
+            })
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
+    use chrono::NaiveDate;
     use diesel::{
         PgConnection,
         r2d2::{ConnectionManager, Pool},
@@ -270,5 +300,83 @@ mod tests {
         )
         .unwrap();
         assert_eq!(result, vec![plot_1.clone(), plot_2.clone(), plot_3.clone()]);
+    }
+
+    #[rstest]
+    pub fn test_get_ownership_states_for_plots(pool: &Pool<ConnectionManager<PgConnection>>) {
+        let mut conn = pool.clone().get().unwrap();
+
+        // --- Setup: Estates ---
+        let estate_1 = crate::db::model::tests::create_test_estate(&mut conn);
+
+        // --- Setup: Plots ---
+        let plot_1 = Plot::create_plot(&mut conn, estate_1.estate_id, "P100", "x", 30, 40).unwrap();
+        let plot_2 = Plot::create_plot(&mut conn, estate_1.estate_id, "P200", "x", 30, 40).unwrap();
+        let plot_3 = Plot::create_plot(&mut conn, estate_1.estate_id, "P300", "x", 30, 40).unwrap();
+
+        // --- Setup: User ---
+        let user = crate::db::model::tests::create_test_user(&mut conn);
+
+        // --- Ownership: plot_1 has two records, latest should be picked ---
+        // --- Ownership for plot 1 (two records, pick the latest) ---
+        Ownership::create_ownership(
+            &mut conn,
+            user.user_id,
+            plot_1.plot_id,
+            OwnershipState::PendingContract,
+            0,
+            0,
+            Some(NaiveDate::from_ymd_opt(2024, 1, 1).unwrap()),
+        )
+        .unwrap();
+
+        Ownership::create_ownership(
+            &mut conn,
+            user.user_id,
+            plot_1.plot_id,
+            OwnershipState::ActivePayment,
+            0,
+            0,
+            Some(NaiveDate::from_ymd_opt(2024, 10, 1).unwrap()),
+        )
+        .unwrap();
+
+        // --- Ownership for plot 2 (single ownership) ---
+        Ownership::create_ownership(
+            &mut conn,
+            user.user_id,
+            plot_2.plot_id,
+            OwnershipState::ActivePayment,
+            0,
+            0,
+            Some(NaiveDate::from_ymd_opt(2024, 5, 10).unwrap()),
+        )
+        .unwrap();
+        // --- Input vector (order should not matter) ---
+        let input_plots = vec![plot_1.clone(), plot_2.clone(), plot_3.clone()];
+
+        let result = Plot::get_ownership_states_for_plots(&mut conn, input_plots).unwrap();
+
+        // Convert result to a map for easier checking
+        let mut map: HashMap<i32, Option<OwnershipState>> =
+            result.into_iter().map(|(p, s)| (p.plot_id, s)).collect();
+
+        // --- plot_1: Should pick the latest ownership by date DESC ---
+        assert_eq!(
+            map.remove(&plot_1.plot_id),
+            Some(Some(OwnershipState::ActivePayment))
+        );
+
+        // --- plot_2: Only one ownership, so that one must appear ---
+        assert_eq!(
+            map.remove(&plot_2.plot_id),
+            Some(Some(OwnershipState::ActivePayment))
+        );
+
+        // --- plot_3: No Ownership ---
+        assert_eq!(map.remove(&plot_3.plot_id), Some(None));
+
+        // No extra entries
+        assert!(map.is_empty());
     }
 }

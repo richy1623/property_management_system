@@ -10,7 +10,7 @@ use crate::{
         user_permission::PermissionType,
     },
     service::property_management::property_management_proto::{
-        GetPlotsRequest as ProtoGetPlotsRequest, PlotCreationRequest as ProtoPlotCreationRequest,
+        PlotCreationRequest as ProtoPlotCreationRequest,
         property_management_server::PropertyManagement,
     },
 };
@@ -90,25 +90,46 @@ pub async fn list_plots(
 ) -> Result<impl Responder> {
     let authorization_header = crate::api::extract_authorization_header(&http_request)?;
 
-    let request = tonic::Request::new(ProtoGetPlotsRequest::from((
-        payload.into_inner(),
-        authorization_header,
-    )));
+    // Decode and validate JWT
+    let jwt_token = services
+        .archive_management_service
+        .clone()
+        .jwt
+        .decode_jwt_token(&authorization_header)?;
 
-    match services
-        .property_management_service
-        .get_plots(request)
-        .await
+    let mut conn = super::get_database_connection(
+        services
+            .archive_management_service
+            .database_connection_pool
+            .clone(),
+    )?;
+
+    let get_plots_request = payload.into_inner();
+
+    if !jwt_token
+        .claims
+        .permissions
+        .contains(&PermissionType::ViewProperties.to_string())
     {
-        Ok(response) => {
-            // Convert the successful gRPC response into the HTTP response
-            Ok(HttpResponse::Ok().json(PlotList::from(response.into_inner())))
-        }
-        Err(status) => {
-            // Map the gRPC error status to an appropriate HTTP response with logging
-            Ok(crate::api::map_grpc_error_to_http_response(status))
-        }
+        return Err(ErrorUnauthorized("Insufficient permissions to view plots"));
     }
+
+    let plot_list = PlotModel::get_plots_filtered(
+        &mut conn,
+        get_plots_request.plot_number.as_deref(),
+        get_plots_request.estate_id,
+        get_plots_request.phase.as_deref(),
+        get_plots_request.allowed_ownership_states.unwrap_or(vec![]),
+    )?;
+
+    let plots_with_ownerships = PlotModel::get_ownership_states_for_plots(&mut conn, plot_list)?;
+
+    Ok(HttpResponse::Ok().json(PlotList {
+        plots: plots_with_ownerships
+            .iter()
+            .map(|(plot, ownership_state)| (plot, *ownership_state).into())
+            .collect(),
+    }))
 }
 
 /// Fetch a plot with a given plot ID
@@ -174,7 +195,7 @@ pub async fn get_plot(
         return Err(ErrorUnauthorized("Insufficient permissions to view plots"));
     }
 
-    Ok(HttpResponse::Ok().json(Plot::from(plot)))
+    Ok(HttpResponse::Ok().json(Plot::from(&plot)))
 }
 
 #[cfg(test)]
@@ -182,7 +203,9 @@ mod tests {
     use std::fs;
 
     use crate::{
-        db::model::{plot::Plot as PlotModel, user_permission::PermissionType},
+        db::model::{
+            ownership::OwnershipState, plot::Plot as PlotModel, user_permission::PermissionType,
+        },
         jwt::{ClaimsBuilder, Jwt},
         secure_storage::SecureStorage,
     };
@@ -339,6 +362,18 @@ mod tests {
                 .collect::<Vec<String>>(),
             vec!["LS-PN-1", "LS-PN-2"]
         );
+        assert_eq!(response_json.plots.len(), 2);
+        assert_eq!(
+            response_json
+                .plots
+                .iter()
+                .map(|plot| plot.current_ownership_status.clone())
+                .collect::<Vec<Option<OwnershipState>>>(),
+            vec![
+                Some(OwnershipState::PendingContract),
+                Some(OwnershipState::PendingContract),
+            ]
+        );
     }
 
     #[rstest]
@@ -382,7 +417,7 @@ mod tests {
         // Assert: Check HTTP status code and returned payload
         assert_eq!(resp.status(), StatusCode::OK);
         let response_json: Plot = test::read_body_json(resp).await;
-        assert_eq!(response_json, plot_1.into());
+        assert_eq!(response_json, (&plot_1).into());
 
         // Check no such plot
         let req = test::TestRequest::get()
