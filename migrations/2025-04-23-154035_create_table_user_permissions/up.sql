@@ -14,10 +14,9 @@ CREATE TYPE permission_type AS ENUM (
 
 CREATE TABLE
     user_permission (
-        user_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL REFERENCES "user" (user_id) ON DELETE CASCADE,
         permission permission_type NOT NULL,
-        PRIMARY KEY (user_id, permission),
-        CONSTRAINT fk_user_permission_user FOREIGN KEY (user_id) REFERENCES "user" (user_id) ON DELETE CASCADE
+        PRIMARY KEY (user_id, permission)
     );
 
 CREATE INDEX idx__user_permission__user_id ON user_permission (user_id);

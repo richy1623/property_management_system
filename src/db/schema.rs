@@ -51,6 +51,13 @@ diesel::table! {
 }
 
 diesel::table! {
+    ownership_artifact (ownership_id, artifact_id) {
+        ownership_id -> Int4,
+        artifact_id -> Int4,
+    }
+}
+
+diesel::table! {
     use diesel::sql_types::*;
     use super::sql_types::PaymentState;
 
@@ -119,6 +126,8 @@ diesel::table! {
 diesel::joinable!(artifact -> user (uploaded_by));
 diesel::joinable!(ownership -> plot (plot_id));
 diesel::joinable!(ownership -> user (user_id));
+diesel::joinable!(ownership_artifact -> artifact (artifact_id));
+diesel::joinable!(ownership_artifact -> ownership (ownership_id));
 diesel::joinable!(payment -> artifact (proof_of_payment_artifact));
 diesel::joinable!(payment -> ownership (ownership_id));
 diesel::joinable!(payment -> user (last_changed_by_user));
@@ -131,6 +140,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     artifact,
     estate,
     ownership,
+    ownership_artifact,
     payment,
     payment_state_audit,
     plot,
