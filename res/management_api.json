@@ -7,6 +7,37 @@
     "version": "0.1.0-SNAPSHOT"
   },
   "paths": {
+    "/api/artifact/": {
+      "post": {
+        "tags": ["Artifact Management"],
+        "summary": "Upload a new artifact to the system.",
+        "description": "The uploaded file is persisted into secure storage, and a database\nrecord is created referencing the stored file.\n\nAuthorization: bearer token with permissions to upload artifacts.",
+        "operationId": "upload_artifact",
+        "requestBody": {
+          "description": "Artifact upload request containing file + metadata",
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ArtifactUploadRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Artifact successfully uploaded",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ArtifactReference" }
+              }
+            }
+          },
+          "400": { "description": "Invalid input or file data" },
+          "401": { "description": "Unauthorized" },
+          "500": { "description": "Unexpected server error" }
+        },
+        "security": [{ "bearerAuth": [] }]
+      }
+    },
     "/api/artifact/{artifact_id}": {
       "get": {
         "tags": ["Artifact Management"],
@@ -729,6 +760,35 @@
             "example": 5001
           },
           "file_display_name": { "type": "string", "example": "receipt.pdf" }
+        }
+      },
+      "ArtifactServiceType": {
+        "type": "string",
+        "enum": ["User", "Estate", "Plot", "Ownership", "Payment"]
+      },
+      "ArtifactUploadRequest": {
+        "type": "object",
+        "description": "Request payload for uploading an artifact to the system.",
+        "required": [
+          "artifact_file",
+          "artifact_service",
+          "service_reference_id"
+        ],
+        "properties": {
+          "artifact_file": {
+            "$ref": "#/components/schemas/ArtifactFile",
+            "description": "File contents and metadata for the artifact being uploaded."
+          },
+          "artifact_service": {
+            "$ref": "#/components/schemas/ArtifactServiceType",
+            "description": "Service domain the artifact belongs to."
+          },
+          "service_reference_id": {
+            "type": "integer",
+            "format": "int32",
+            "description": "ID of the record in the service domain this artifact is associated with.",
+            "example": 101
+          }
         }
       },
       "CreateUserRequest": {

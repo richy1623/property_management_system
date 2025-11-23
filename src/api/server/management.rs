@@ -5,7 +5,7 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::api::AppServices;
-use crate::api::handler::artifact_handler::get_artifact;
+use crate::api::handler::artifact_handler::{get_artifact, upload_artifact};
 use crate::api::handler::estate_handler::{create_estate, list_estates};
 use crate::api::handler::health_handler::health_check;
 use crate::api::handler::ownership_handler::{
@@ -64,7 +64,11 @@ pub fn api_routes(app_services: Arc<AppServices>) -> Scope {
                 .route("/update", web::post().to(update_payment_state)),
         )
         // Artifact routes
-        .service(web::scope("/artifact").route("/{artifact_id}", web::get().to(get_artifact)))
+        .service(
+            web::scope("/artifact")
+                .route("/", web::post().to(upload_artifact))
+                .route("/{artifact_id}", web::get().to(get_artifact)),
+        )
         // Health check routes
         .service(web::scope("/health").route("", web::get().to(health_check)))
         // Serve Swagger UI
@@ -112,6 +116,7 @@ pub mod doc {
         payment_handler::get_payments_for_ownerships,
         payment_handler::get_payments_in_state,
         payment_handler::update_payment_state,
+        artifact_handler::upload_artifact,
         artifact_handler::get_artifact,
         health_handler::health_check
     ),
