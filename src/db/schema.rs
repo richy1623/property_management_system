@@ -2,6 +2,10 @@
 
 pub mod sql_types {
     #[derive(diesel::query_builder::QueryId, Clone, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "artifact_service_type"))]
+    pub struct ArtifactServiceType;
+
+    #[derive(diesel::query_builder::QueryId, Clone, diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "ownership_state"))]
     pub struct OwnershipState;
 
@@ -15,13 +19,17 @@ pub mod sql_types {
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::ArtifactServiceType;
+
     artifact (artifact_id) {
         artifact_id -> Int4,
         file_display_name -> Text,
         file_path -> Text,
         upload_date -> Date,
         uploaded_by -> Int4,
-        is_temporary -> Bool,
+        service_type -> ArtifactServiceType,
+        service_reference_id -> Int4,
     }
 }
 

@@ -1,7 +1,6 @@
 pub mod artifact;
 pub mod estate;
 pub mod ownership;
-pub mod ownership_artifact;
 pub mod payment;
 pub mod payment_state_audit;
 pub mod plot;
@@ -13,6 +12,8 @@ pub mod tests {
     use chrono::NaiveDate;
     use diesel::PgConnection;
     use uuid::Uuid;
+
+    use crate::db::model::artifact::ArtifactServiceType;
 
     use super::{
         artifact::Artifact,
@@ -93,13 +94,20 @@ pub mod tests {
         .unwrap()
     }
 
-    pub fn create_test_artifact(conn: &mut PgConnection, user: &User, file_path: &str) -> Artifact {
+    pub fn create_test_artifact(
+        conn: &mut PgConnection,
+        user: &User,
+        file_path: &str,
+        service_type: ArtifactServiceType,
+        service_reference_id: i32,
+    ) -> Artifact {
         Artifact::create_artifact(
             conn,
             &Uuid::new_v4().to_string(),
             file_path,
             user.user_id,
-            true,
+            service_type,
+            service_reference_id,
         )
         .unwrap()
     }

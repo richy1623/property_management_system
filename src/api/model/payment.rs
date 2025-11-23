@@ -2,7 +2,10 @@ use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::{api::model::artifact::ArtifactReference, db::model::payment::PaymentState};
+use crate::{
+    api::model::artifact::{ArtifactFile, ArtifactReference},
+    db::model::payment::PaymentState,
+};
 
 /// Represents a payment linked to an ownership.
 #[derive(Debug, ToSchema, Deserialize, Serialize, PartialEq)]
@@ -31,18 +34,6 @@ pub struct Payment {
     pub last_changed_by_user: i32,
 
     pub proof_of_payment: Option<ArtifactReference>,
-}
-
-/// File to be saved to as an artifact
-#[derive(Debug, ToSchema, Serialize, Deserialize, PartialEq)]
-pub struct ArtifactFile {
-    #[schema(example = "receipt.pdf")]
-    /// Display name of the uploaded file
-    pub file_name: String,
-
-    #[schema(value_type = String, format = Binary)]
-    /// Raw file contents as base64
-    pub file_content: Vec<u8>,
 }
 
 ///  Request for creating a new payment.

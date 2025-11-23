@@ -223,11 +223,11 @@ mod tests {
 
         // Setup plots
         let plot_1 =
-            Plot::create_plot(&mut conn, estate_1.estate_id, "P100", "Alpha", 30, 40).unwrap();
+            Plot::create_plot(&mut conn, estate_1.estate_id, "PF100", "AF", 30, 40).unwrap();
         let plot_2 =
-            Plot::create_plot(&mut conn, estate_1.estate_id, "P200", "Beta", 30, 40).unwrap();
+            Plot::create_plot(&mut conn, estate_1.estate_id, "PF200", "BF", 30, 40).unwrap();
         let plot_3 =
-            Plot::create_plot(&mut conn, estate_2.estate_id, "P300", "Gamma", 30, 40).unwrap();
+            Plot::create_plot(&mut conn, estate_2.estate_id, "PF300", "GF", 30, 40).unwrap();
 
         // Create test user
         let user = crate::db::model::tests::create_test_user(&mut conn);
@@ -246,7 +246,7 @@ mod tests {
             &mut conn,
             user.user_id,
             plot_2.plot_id,
-            OwnershipState::ActivePayment,
+            OwnershipState::Paid,
             0,
             0,
             None,
@@ -264,7 +264,8 @@ mod tests {
         .unwrap();
 
         // --- Filter by plot_number ---
-        let result = Plot::get_plots_filtered(&mut conn, Some("P100"), None, None, vec![]).unwrap();
+        let result =
+            Plot::get_plots_filtered(&mut conn, Some("PF100"), None, None, vec![]).unwrap();
 
         assert_eq!(result, vec![plot_1.clone()]);
 
@@ -275,7 +276,7 @@ mod tests {
         assert_eq!(result, vec![plot_3.clone()]);
 
         // --- Filter by phase ---
-        let result = Plot::get_plots_filtered(&mut conn, None, None, Some("Beta"), vec![]).unwrap();
+        let result = Plot::get_plots_filtered(&mut conn, None, None, Some("BF"), vec![]).unwrap();
         assert_eq!(result, vec![plot_2.clone()]);
 
         // --- Filter by ownership state ---
@@ -287,7 +288,9 @@ mod tests {
             vec![OwnershipState::ActivePayment],
         )
         .unwrap();
-        assert_eq!(result, vec![plot_1.clone(), plot_2.clone()]);
+        assert!(result.contains(&plot_1));
+        assert!(!result.contains(&plot_2));
+        assert!(!result.contains(&plot_3));
         let result = Plot::get_plots_filtered(
             &mut conn,
             None,
@@ -299,7 +302,9 @@ mod tests {
             ],
         )
         .unwrap();
-        assert_eq!(result, vec![plot_1.clone(), plot_2.clone(), plot_3.clone()]);
+        assert!(result.contains(&plot_1));
+        assert!(!result.contains(&plot_2));
+        assert!(result.contains(&plot_3));
     }
 
     #[rstest]

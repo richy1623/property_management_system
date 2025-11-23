@@ -9,7 +9,7 @@ use crate::{
         },
     },
     db::model::{
-        artifact::Artifact as ArtifactModel,
+        artifact::{Artifact as ArtifactModel, ArtifactServiceType},
         ownership::Ownership as OwnershipModel,
         payment::{Payment as PaymentModel, PaymentState},
         user::User as UserModel,
@@ -296,31 +296,6 @@ pub async fn create_payment(
         ));
     }
 
-    let artifact =
-        if let Some(proof_of_payment_file) = payment_creation_request.proof_of_payment_file {
-            // Store the artifact
-            let file_name = Uuid::new_v4().to_string();
-            let stored_file_ref = services
-                .archive_management_service
-                .secure_storage
-                .store_file(
-                    &file_name,
-                    &proof_of_payment_file.file_content,
-                    Utc::now().date_naive(),
-                )
-                .await?;
-
-            Some(ArtifactModel::create_artifact(
-                &mut conn,
-                &proof_of_payment_file.file_name,
-                stored_file_ref.to_str().unwrap(),
-                user_making_request.user_id,
-                true,
-            )?)
-        } else {
-            None
-        };
-
     let payment = PaymentModel::create_user_payment(
         &mut conn,
         ownership.ownership_id,
@@ -328,8 +303,38 @@ pub async fn create_payment(
         payment_creation_request.amount,
         &payment_creation_request.reference,
         user_making_request.user_id,
-        artifact.as_ref().map(|artifact| artifact.artifact_id),
     )?;
+
+    let artifact = if let Some(proof_of_payment_file) =
+        payment_creation_request.proof_of_payment_file
+    {
+        // Store the artifact
+        let file_name = Uuid::new_v4().to_string();
+        let stored_file_ref = services
+            .archive_management_service
+            .secure_storage
+            .store_file(
+                &file_name,
+                &proof_of_payment_file.file_content,
+                Utc::now().date_naive(),
+            )
+            .await?;
+
+        let artifact = ArtifactModel::create_artifact(
+            &mut conn,
+            &proof_of_payment_file.file_name,
+            stored_file_ref.to_str().unwrap(),
+            user_making_request.user_id,
+            ArtifactServiceType::Payment,
+            payment.payment_id,
+        )?;
+
+        PaymentModel::set_proof_of_payment(&mut conn, payment.payment_id, artifact.artifact_id)?;
+
+        Some(artifact)
+    } else {
+        None
+    };
 
     Ok(HttpResponse::Ok().json(Payment::from((&payment, artifact.as_ref()))))
 }
