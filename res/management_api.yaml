@@ -1,0 +1,731 @@
+openapi: "3.0.3"
+info:
+  title: Management API
+  version: "1.0.0"
+servers:
+  - url: https://localhost:8080/v1
+
+tags:
+  - name: User Management
+    description: Operations related to users
+  - name: Property Management
+    description: Operations related to property
+  - name: Payment Management
+    description: Operations related to payments
+
+paths:
+  /user/login:
+    post:
+      tags:
+        - User Management
+      summary: User Login
+      description: Authenticates a user and returns an access token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXCVI9...
+        "400":
+          description: Missing or invalid input
+        "401":
+          description: Unauthorized
+  /user/create:
+    post:
+      security:
+        - bearerAuth: []
+      tags:
+        - User Management
+      summary: Create User
+      description: Registers a new user in the system.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+      responses:
+        "201":
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Missing or invalid input
+        "401":
+          description: Unauthorized
+        "409":
+          description: User already exists
+  /user/list:
+    post:
+      security:
+        - bearerAuth: []
+      tags:
+        - User Management
+      summary: List Users
+      description: Returns a list of registered users, filtered by optional parameters.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ListUsersRequest"
+      responses:
+        "200":
+          description: List of users retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+        "400":
+          description: Missing or invalid input
+        "401":
+          description: Unauthorized
+
+  /estate/create:
+    post:
+      tags:
+        - Property Management
+      summary: Create Estate
+      description: Creates a new estate.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EstateCreationRequest"
+      responses:
+        "201":
+          description: Estate created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Estate"
+        "400":
+          description: Missing or invalid input
+        "401":
+          description: Unauthorized
+
+  /estate/list:
+    get:
+      tags:
+        - Property Management
+      summary: Get All Estates
+      description: Returns a list of all estates.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of estates
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EstateList"
+        "400":
+          description: Missing or invalid input
+        "401":
+          description: Unauthorized
+
+  /plot/create:
+    post:
+      tags:
+        - Property Management
+      summary: Create Plot
+      description: Creates a new plot within an estate.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlotCreationRequest"
+      responses:
+        "201":
+          description: Plot created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Plot"
+        "400":
+          description: Missing or invalid input
+        "401":
+          description: Unauthorized
+
+  /plot/list:
+    post:
+      tags:
+        - Property Management
+      summary: Get Plots
+      description: Returns a list of plots filtered by optional parameters.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GetPlotsRequest"
+      responses:
+        "200":
+          description: List of plots
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlotList"
+        "400":
+          description: Missing or invalid input
+        "401":
+          description: Unauthorized
+
+  /ownership/create:
+    post:
+      tags:
+        - Property Management
+      summary: Create Ownership
+      description: Creates a new ownership record.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OwnershipCreationRequest"
+      responses:
+        "201":
+          description: Ownership created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ownership"
+        "400":
+          description: Missing or invalid input
+        "401":
+          description: Unauthorized
+
+  /payment/ownership:
+    get:
+      tags:
+        - Payment Management
+      summary: Get Payments for Ownership
+      description: Retrieves payments related to a specific ownership.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ownership_id
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int32
+            example: 2001
+          description: Ownership ID to filter payments by
+      responses:
+        "200":
+          description: List of payments for ownership
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentList"
+        "400":
+          description: Missing or invalid input
+        "401":
+          description: Unauthorized
+
+  /payment/state:
+    get:
+      tags:
+        - Payment Management
+      summary: Get Payments in State
+      description: Retrieves payments filtered by their state, with pagination support.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: state
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/PaymentState"
+          description: State of payments to filter by
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            example: 0
+          description: Pagination offset
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            example: 20
+          description: Pagination limit
+      responses:
+        "200":
+          description: List of payments filtered by state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentList"
+        "401":
+          description: Unauthorized
+
+  /payment/update:
+    post:
+      tags:
+        - Payment Management
+      summary: Update Payment State
+      description: Updates the state and comment of a payment and returns the updated payment.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePaymentStateRequest"
+      responses:
+        "200":
+          description: Updated payment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "400":
+          description: Invalid input
+        "401":
+          description: Unauthorized
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          example: john_doe
+        password:
+          type: string
+          format: password
+          example: secret123
+
+    CreateUserRequest:
+      type: object
+      required:
+        - user_name
+        - name
+        - password
+      properties:
+        user_name:
+          type: string
+          example: john_doe
+        name:
+          type: string
+          example: John Doe
+        cellphone_number:
+          type: string
+          example: "+1234567890"
+        email_address:
+          type: string
+          format: email
+          example: john@example.com
+        identification_number:
+          type: string
+          example: "ID123456789"
+        password:
+          type: string
+          format: password
+          example: secret123
+
+    User:
+      type: object
+      required:
+        - user_id
+        - user_name
+        - name
+        - password
+      properties:
+        user_id:
+          type: integer
+          format: int32
+          example: 101
+        username:
+          type: string
+          example: john_doe
+        name:
+          type: string
+          example: John Doe
+        cellphone_number:
+          type: string
+          example: "+1234567890"
+        email_address:
+          type: string
+          format: email
+          example: john@example.com
+        identification_number:
+          type: string
+          example: "ID123456789"
+
+    ListUsersRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          description: Filter users by exact username
+        name_regex:
+          type: string
+          description: Filter users by name regex pattern
+        cellphone_number:
+          type: string
+          description: Filter users by cellphone number
+        email_address:
+          type: string
+          format: email
+          description: Filter users by email address
+        identification_number:
+          type: string
+          description: Filter users by identification number
+
+    Estate:
+      type: object
+      required:
+        - estate_id
+        - name
+        - location
+        - district
+        - landmark
+      properties:
+        estate_id:
+          type: integer
+          format: int32
+          example: 1
+        name:
+          type: string
+          example: "Sunrise Estate"
+        location:
+          type: string
+          example: "Durban"
+        district:
+          type: string
+          example: "Westlake"
+        landmark:
+          type: string
+          example: "Near the big mall"
+
+    EstateCreationRequest:
+      type: object
+      required:
+        - name
+        - location
+        - district
+        - landmark
+      properties:
+        name:
+          type: string
+          example: "Sunrise Estate"
+        location:
+          type: string
+          example: "Durban"
+        district:
+          type: string
+          example: "Westlake"
+        landmark:
+          type: string
+          example: "Near the big mall"
+
+    EstateList:
+      type: object
+      required:
+        - estates
+      properties:
+        estates:
+          type: array
+          items:
+            $ref: "#/components/schemas/Estate"
+
+    Plot:
+      type: object
+      required:
+        - plot_id
+        - estate_id
+        - plot_number
+        - phase
+        - length
+        - width
+      properties:
+        plot_id:
+          type: integer
+          format: int32
+          example: 101
+        estate_id:
+          type: integer
+          format: int32
+          example: 1
+        plot_number:
+          type: string
+          example: "P-101"
+        phase:
+          type: string
+          example: "Phase 1"
+        length:
+          type: integer
+          format: int32
+          example: 40
+        width:
+          type: integer
+          format: int32
+          example: 30
+
+    PlotCreationRequest:
+      type: object
+      required:
+        - estate_id
+        - plot_number
+        - phase
+        - length
+        - width
+      properties:
+        estate_id:
+          type: integer
+          format: int32
+          example: 1
+        plot_number:
+          type: string
+          example: "P-101"
+        phase:
+          type: string
+          example: "Phase 1"
+        length:
+          type: integer
+          format: int32
+          example: 40
+        width:
+          type: integer
+          format: int32
+          example: 30
+
+    GetPlotsRequest:
+      type: object
+      properties:
+        plot_number:
+          type: string
+          example: "P-101"
+        estate_id:
+          type: integer
+          format: int32
+          example: 1
+        phase:
+          type: string
+          example: "Phase 1"
+        allowed_ownership_states:
+          type: array
+          items:
+            $ref: "#/components/schemas/OwnershipState"
+
+    PlotList:
+      type: object
+      required:
+        - plots
+      properties:
+        plots:
+          type: array
+          items:
+            $ref: "#/components/schemas/Plot"
+
+    Ownership:
+      type: object
+      required:
+        - ownership_id
+        - user_id
+        - plot_id
+        - state
+        - total_sale_value
+        - monthly_repayment_amount
+      properties:
+        ownership_id:
+          type: integer
+          format: int32
+          example: 1001
+        user_id:
+          type: integer
+          format: int32
+          example: 101
+        user_name:
+          type: string
+          example: "john_doe"
+        plot_id:
+          type: integer
+          format: int32
+          example: 101
+        state:
+          $ref: "#/components/schemas/OwnershipState"
+        total_sale_value:
+          type: integer
+          format: int32
+          example: 5000000
+        monthly_repayment_amount:
+          type: integer
+          format: int32
+          example: 50000
+
+    OwnershipCreationRequest:
+      type: object
+      required:
+        - user_id
+        - plot_id
+        - state
+        - total_sale_value
+        - monthly_repayment_amount
+      properties:
+        user_id:
+          type: integer
+          format: int32
+          example: 101
+        plot_id:
+          type: integer
+          format: int32
+          example: 101
+        state:
+          $ref: "#/components/schemas/OwnershipState"
+        total_sale_value:
+          type: integer
+          format: int32
+          example: 5000000
+        monthly_repayment_amount:
+          type: integer
+          format: int32
+          example: 50000
+
+    OwnershipUpdateRequest:
+      type: object
+      required:
+        - ownership_id
+      properties:
+        ownership_id:
+          type: integer
+          format: int32
+          example: 1001
+        state:
+          $ref: "#/components/schemas/OwnershipState"
+        total_sale_value:
+          type: integer
+          format: int32
+          example: 5000000
+        monthly_repayment_amount:
+          type: integer
+          format: int32
+          example: 50000
+
+    OwnershipState:
+      type: string
+      enum:
+        - PENDING_CONTRACT
+        - ACTIVE_PAYMENT
+        - PAID
+        - DEFAULTED
+      example: ACTIVE_PAYMENT
+
+    Payment:
+      type: object
+      required:
+        - payment_id
+        - ownership_id
+        - date
+        - amount
+        - state
+        - comment
+        - reference
+        - last_changed_by_user
+      properties:
+        payment_id:
+          type: integer
+          format: int32
+          example: 1001
+        ownership_id:
+          type: integer
+          format: int32
+          example: 2001
+        date:
+          type: string
+          format: date
+          example: "2025-06-01"
+        amount:
+          type: integer
+          format: int32
+          example: 50000
+        state:
+          $ref: "#/components/schemas/PaymentState"
+        comment:
+          type: string
+          example: "Payment for May 2025"
+        reference:
+          type: string
+          example: "REF123456"
+        last_changed_by_user:
+          type: integer
+          format: int32
+          example: 101
+
+    PaymentList:
+      type: object
+      required:
+        - payments
+      properties:
+        payments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Payment"
+
+    PaymentState:
+      type: string
+      enum:
+        - PENDING_APPROVAL
+        - APPROVED
+        - REJECTED
+      example: PENDING_APPROVAL
+
+    UpdatePaymentStateRequest:
+      type: object
+      required:
+        - payment_id
+        - state
+      properties:
+        payment_id:
+          type: integer
+          format: int32
+          example: 1001
+        state:
+          $ref: "#/components/schemas/PaymentState"
+        comment:
+          type: string
+          example: "Marked as completed after verification"
+security: []

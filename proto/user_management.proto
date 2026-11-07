@@ -1,0 +1,54 @@
+syntax = "proto3";
+package property_management_system.user_management;
+
+service UserManagement {
+    rpc CreateUser (UserCreationRequest) returns (User);
+    rpc LoginUser (UserLoginRequest) returns (UserLoginResponse);
+
+    rpc ListUsers (ListUsersRequest) returns (ListUsersResponse);
+}
+
+message UserCreationRequest {
+    string user_name = 1;
+    string name = 2;
+    optional string cellphone_number = 3;
+    optional string email_address = 4;
+    optional string identification_number = 5;
+    string password = 6;
+}
+
+message User {
+    int32 user_id = 1;
+    string username = 2;
+    string name = 3;
+    optional string cellphone_number = 4;
+    optional string email_address = 5;
+    optional string identification_number = 6;
+}
+
+message UserLoginRequest {
+    string user_name = 1;
+    string password = 2;
+}
+
+message UserLoginResponse {
+    string jwt_token = 1;
+    int32 user_id = 2;
+}
+
+message ListUsersRequest {
+    string jwt_token = 1;
+    optional string username = 2;
+    // TODO make this better and doc it
+    optional string name_regex = 3;
+    optional string cellphone_number = 4;
+    optional string email_address = 5;
+    optional string identification_number = 6;
+}
+
+message ListUsersResponse {
+    repeated User users = 1;
+}
+
+// TODO
+// grant user permissions

@@ -1,0 +1,101 @@
+syntax = "proto3";
+package property_management_system.property_management;
+
+service PropertyManagement {
+    rpc CreateEstate (EstateCreationRequest) returns (Estate);
+    rpc GetAllEstates (Empty) returns (EstateList);
+
+    rpc CreatePlot (PlotCreationRequest) returns (Plot);
+    rpc GetPlots (GetPlotsRequest) returns (PlotList);
+
+    rpc CreateOwnership (OwnershipCreationRequest) returns (Ownership);
+    rpc UpdateOwnership (OwnershipUpdateRequest) returns (Ownership);
+}
+
+message Empty {}
+
+message Estate {
+    int32 estate_id = 1; 
+    string name = 2;
+    string location = 3;
+    string district = 4;
+    string landmark = 5;
+}
+
+message EstateCreationRequest {
+    string jwt_token = 1;
+    string name = 2;
+    string location = 3;
+    string district = 4;
+    string landmark = 5;
+}
+
+message EstateList {
+    repeated Estate estates = 1;
+}
+
+message PlotCreationRequest {
+    string jwt_token = 1;
+    int32 estate_id = 2;
+    string plot_number = 3;
+    string phase = 4;
+    int32 length = 5;
+    int32 width = 6;
+}
+
+message Plot {
+    int32 plot_id = 1;
+    int32 estate_id = 2;
+    string plot_number = 3;
+    string phase = 4;
+    int32 length = 5;
+    int32 width = 6;
+}
+
+message GetPlotsRequest {
+    string jwt_token = 1;
+    optional string plot_number = 2;
+    optional int32 estate_id = 3;
+    optional string phase = 4;
+    repeated OwnershipState allowed_ownership_states = 5;
+}
+
+enum OwnershipState {
+    OWNERSHIP_STATE_UNSPECIFIED = 0;
+    ACTIVE_PAYMENT = 1;
+    COMPLETED = 2;
+    PENDING = 3;
+    CANCELLED = 4;
+}
+
+message PlotList {
+    repeated Plot plots = 1;
+}
+
+message OwnershipCreationRequest {
+    string jwt_token = 1;
+    int32 user_id = 2;
+    int32 plot_id = 3;
+    OwnershipState state = 4;
+    int32 total_sale_value = 5;
+    int32 monthly_repayment_amount = 6;
+}
+
+message Ownership {
+    int32 ownership_id = 1;
+    int32 user_id = 2;
+    string user_name = 3;
+    int32 plot_id = 4;
+    OwnershipState state = 5;
+    int32 total_sale_value = 6;
+    int32 monthly_repayment_amount = 7;
+}
+
+message OwnershipUpdateRequest {
+    string jwt_token = 1;
+    int32 ownership_id = 2;
+    optional OwnershipState state = 3;
+    optional int32 total_sale_value = 4;
+    optional int32 monthly_repayment_amount = 5;
+}
+

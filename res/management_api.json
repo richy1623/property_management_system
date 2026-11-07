@@ -1,0 +1,1470 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Management API",
+    "description": "Management API",
+    "license": { "name": "" },
+    "version": "0.1.0-SNAPSHOT"
+  },
+  "paths": {
+    "/api/artifact/": {
+      "post": {
+        "tags": ["Artifact Management"],
+        "summary": "Upload a new artifact to the system.",
+        "description": "The uploaded file is persisted into secure storage, and a database\nrecord is created referencing the stored file.\n\nAuthorization: bearer token with permissions to upload artifacts.",
+        "operationId": "upload_artifact",
+        "requestBody": {
+          "description": "Artifact upload request containing file + metadata",
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ArtifactUploadRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Artifact successfully uploaded",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ArtifactReference" }
+              }
+            }
+          },
+          "400": { "description": "Invalid input or file data" },
+          "401": { "description": "Unauthorized" },
+          "500": { "description": "Unexpected server error" }
+        },
+        "security": [{ "bearerAuth": [] }]
+      }
+    },
+    "/api/artifact/{artifact_id}": {
+      "get": {
+        "tags": ["Artifact Management"],
+        "summary": "Retrieve artifact with a given artifact ID",
+        "description": "Accepts an artifact ID and returns the artifact associated with it.\nAuthorization: bearer token.",
+        "operationId": "get_artifact",
+        "parameters": [
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "description": "Artifact ID to return",
+            "required": true,
+            "schema": { "type": "integer", "format": "int32" },
+            "example": "1001"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The requested artifact",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Artifact" }
+              }
+            }
+          },
+          "400": { "description": "Missing or invalid input" },
+          "401": { "description": "Unauthorized" }
+        },
+        "security": [{ "bearerAuth": [] }]
+      }
+    },
+    "/api/estate/create": {
+      "post": {
+        "tags": ["Property Management"],
+        "summary": "Create a new estate",
+        "description": "Accepts estate details such as name, location, district, and landmark,\nand creates a new estate record in the system.\nAuthorization: bearer token.",
+        "operationId": "create_estate",
+        "requestBody": {
+          "description": "Estate creation data",
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/EstateCreationRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Estate created successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Estate" }
+              }
+            }
+          },
+          "400": { "description": "Missing or invalid input" },
+          "401": { "description": "Unauthorized" }
+        },
+        "security": [{ "bearerAuth": [] }]
+      }
+    },
+    "/api/estate/list": {
+      "get": {
+        "tags": ["Property Management"],
+        "summary": "Retrieve all estates in the system",
+        "description": "Returns a list of all estates stored in the system.\nAuthorization: bearer token.",
+        "operationId": "list_estates",
+        "responses": {
+          "200": {
+            "description": "List of estates",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EstateList" }
+              }
+            }
+          },
+          "400": { "description": "Missing or invalid input" },
+          "401": { "description": "Unauthorized" }
+        },
+        "security": [{ "bearerAuth": [] }]
+      }
+    },
+    "/api/health": {
+      "get": {
+        "tags": ["Health Check"],
+        "summary": "Health check endpoint",
+        "description": "Returns the health status of the service and its database.",
+        "operationId": "health_check",
+        "responses": {
+          "200": { "description": "Service is healthy" },
+          "503": { "description": "Service or database is unavailable" }
+        }
+      }
+    },
+    "/api/ownership/create": {
+      "post": {
+        "tags": ["Property Management"],
+        "summary": "Create a new ownership record",
+        "description": "Accepts user ID, plot ID, ownership state, total sale value, and repayment details.\nCreates a new ownership link between a user and a plot in the system.\nAuthorization: bearer token.",
+        "operationId": "create_ownership",
+        "requestBody": {
+          "description": "Ownership creation data",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnershipCreationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Ownership created successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Ownership" }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing or invalid input",
+            "content": { "text/plain": { "schema": { "type": "string" } } }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": { "text/plain": { "schema": { "type": "string" } } }
+          }
+        },
+        "security": [{ "bearerAuth": [] }]
+      }
+    },
+    "/api/ownership/update": {
+      "put": {
+        "tags": ["Property Management"],
+        "summary": "Update an existing ownership record",
+        "description": "Accepts the ownership ID along with optional updates to state, total sale value,\nand monthly repayment amount. Requires a valid bearer token for authorization.\nReturns the updated ownership record if successful.\n\nAuthorization: bearer token.",
+        "operationId": "update_ownership",
+        "requestBody": {
+          "description": "Ownership update data",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnershipUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Ownership updated successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Ownership" }
+              }
+            }
+          },
+          "400": { "description": "Missing or invalid input" },
+          "401": { "description": "Unauthorized" },
+          "404": {
+            "description": "Invalid OwnershipUpdateRequest payload received"
+          }
+        },
+        "security": [{ "bearerAuth": [] }]
+      }
+    },
+    "/api/ownership/{ownership_id}": {
+      "get": {
+        "tags": ["Property Management"],
+        "summary": "Get an existing ownership record by ID",
+        "description": "Returns the ownership record for the specified ownership ID.\nRequires a valid bearer token for authorization.\n\nAuthorization: bearer token.",
+        "operationId": "get_ownership",
+        "parameters": [
+          {
+            "name": "ownership_id",
+            "in": "path",
+            "description": "The ID of the ownership record to retrieve",
+            "required": true,
+            "schema": { "type": "integer", "format": "int32" },
+            "example": 42
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ownership retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Ownership" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Ownership not found" }
+        },
+        "security": [{ "bearerAuth": [] }]
+      }
+    },
+    "/api/ownerships": {
+      "get": {
+        "tags": ["Property Management"],
+        "summary": "Get ownership records with optional filters",
+        "description": "Returns a list of ownership records matching the provided filters.\nRequires a valid bearer token for authorization.\n\nAuthorization: bearer token.\n\n### Example Query\n`/api/ownerships?user_id=10&plot_id=5&state=ACTIVE`",
+        "operationId": "get_ownerships",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "description": "Optional user ID to filter ownerships",
+            "required": false,
+            "schema": { "type": ["integer", "null"], "format": "int32" }
+          },
+          {
+            "name": "plot_id",
+            "in": "query",
+            "description": "Optional plot ID to filter ownerships",
+            "required": false,
+            "schema": { "type": ["integer", "null"], "format": "int32" }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "description": "Optional state to filter ownerships",
+            "required": false,
+            "schema": {
+              "oneOf": [
+                { "type": "null" },
+                { "$ref": "#/components/schemas/OwnershipState" }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ownerships retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Ownership" }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "500": { "description": "Internal server error" }
+        },
+        "security": [{ "bearerAuth": [] }]
+      }
+    },
+    "/api/payment/": {
+      "post": {
+        "tags": ["Payment Management"],
+        "summary": "Create a new payment record",
+        "description": "Creates a new payment for a specific ownership. The authenticated user must either own the\nownership or have the `ModifyPayments` permission.\nAuthorization: bearer token.",
+        "operationId": "create_payment",
+        "requestBody": {
+          "description": "Details of the payment update",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentCreationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Updated payment",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Payment" }
+              }
+            }
+          },
+          "400": { "description": "Invalid input" },
+          "401": { "description": "Unauthorized" }
+        },
+        "security": [{ "bearerAuth": [] }]
+      }
+    },
+    "/api/payment/ownership": {
+      "post": {
+        "tags": ["Payment Management"],
+        "summary": "Retrieve payments for a given ownership",
+        "description": "Accepts a list of ownership IDs and returns all payments associated with it.\nAuthorization: bearer token.",
+        "operationId": "get_payments_for_ownerships",
+        "requestBody": {
+          "description": "Ownership IDs to filter payments by",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetOwnershipPaymentsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "List of payments for ownership",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PaymentList" }
+              }
+            }
+          },
+          "400": { "description": "Missing or invalid input" },
+          "401": { "description": "Unauthorized" }
+        },
+        "security": [{ "bearerAuth": [] }]
+      }
+    },
+    "/api/payment/state": {
+      "get": {
+        "tags": ["Payment Management"],
+        "summary": "Retrieve payments filtered by state",
+        "description": "Accepts a payment state and returns matching payments, with optional pagination using offset and limit.\nAuthorization: bearer token.",
+        "operationId": "get_payments_in_state",
+        "parameters": [
+          {
+            "name": "state",
+            "in": "query",
+            "description": "State of payments to filter by",
+            "required": true,
+            "schema": { "$ref": "#/components/schemas/PaymentState" }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Pagination offset",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Pagination limit",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of payments filtered by state",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PaymentList" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        },
+        "security": [{ "bearerAuth": [] }]
+      }
+    },
+    "/api/payment/update": {
+      "post": {
+        "tags": ["Payment Management"],
+        "summary": "Update the state and comment of a payment",
+        "description": "Accepts the payment ID, new state, and an optional comment,\nand updates the corresponding payment record in the system.\nAuthorization: bearer token.",
+        "operationId": "update_payment_state",
+        "requestBody": {
+          "description": "Details of the payment update",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePaymentStateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Updated payment",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Payment" }
+              }
+            }
+          },
+          "400": { "description": "Invalid input" },
+          "401": { "description": "Unauthorized" }
+        },
+        "security": [{ "bearerAuth": [] }]
+      }
+    },
+    "/api/plot/create": {
+      "post": {
+        "tags": ["Property Management"],
+        "summary": "Create a new plot within an estate",
+        "description": "Accepts plot details like estate ID, plot number, phase, dimensions,\nand creates a new plot record under the specified estate.\nAuthorization: bearer token.",
+        "operationId": "create_plot",
+        "requestBody": {
+          "description": "Plot creation data",
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PlotCreationRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Plot created successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Plot" }
+              }
+            }
+          },
+          "400": { "description": "Missing or invalid input" },
+          "401": { "description": "Unauthorized" }
+        },
+        "security": [{ "bearerAuth": [] }]
+      }
+    },
+    "/api/plot/list": {
+      "post": {
+        "tags": ["Property Management"],
+        "summary": "Retrieve plots filtered by optional criteria",
+        "description": "Accepts filter parameters like estate ID, plot number, phase, and ownership states,\nand returns matching plot records.\nAuthorization: bearer token.",
+        "operationId": "list_plots",
+        "requestBody": {
+          "description": "Optional filters for plots",
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/GetPlotsRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "List of plots",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PlotList" }
+              }
+            }
+          },
+          "400": { "description": "Missing or invalid input" },
+          "401": { "description": "Unauthorized" }
+        },
+        "security": [{ "bearerAuth": [] }]
+      }
+    },
+    "/api/plot/{plot_id}": {
+      "get": {
+        "tags": ["Property Management"],
+        "summary": "Fetch a plot with a given plot ID",
+        "description": "Returns the plot matching the plot ID.\nAuthorization: bearer token.",
+        "operationId": "get_plot",
+        "parameters": [
+          {
+            "name": "plot_id",
+            "in": "path",
+            "description": "The ID of the plot record to retrieve",
+            "required": true,
+            "schema": { "type": "integer", "format": "int32" },
+            "example": 42
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The desired Plot",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Plot" }
+              }
+            }
+          },
+          "400": { "description": "Missing or invalid input" },
+          "401": { "description": "Unauthorized" }
+        },
+        "security": [{ "bearerAuth": [] }]
+      }
+    },
+    "/api/user/create": {
+      "post": {
+        "tags": ["User Management"],
+        "summary": "Register a new user in the system",
+        "description": "Accepts user details, validates them, and creates a new user account if the username\nis not already taken.\nAuthorization: bearer token.",
+        "operationId": "create_user",
+        "requestBody": {
+          "description": "User creation details",
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateUserRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "User created successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/User" }
+              }
+            }
+          },
+          "400": { "description": "Missing or invalid input" },
+          "401": { "description": "Unauthorized" },
+          "409": { "description": "User already exists" }
+        },
+        "security": [{ "bearerAuth": [] }]
+      }
+    },
+    "/api/user/list": {
+      "post": {
+        "tags": ["User Management"],
+        "summary": "Return a list of users, filtered by optional parameters",
+        "description": "Accepts optional filter parameters to query registered users by username, name regex,\ncellphone, email, or identification number.\nAuthorization: bearer token.",
+        "operationId": "list_users",
+        "requestBody": {
+          "description": "Filters for querying users",
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ListUsersRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "List of users retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/User" }
+                }
+              }
+            }
+          },
+          "400": { "description": "Missing or invalid input" },
+          "401": { "description": "Unauthorized" }
+        },
+        "security": [{ "bearerAuth": [] }]
+      }
+    },
+    "/api/user/login": {
+      "post": {
+        "tags": ["User Management"],
+        "summary": "Authenticate a user and return an access token.",
+        "description": "Accepts a username and password, verifies credentials, and returns a JWT access token\nfor use in subsequent authenticated requests.",
+        "operationId": "login_user",
+        "requestBody": {
+          "description": "User login credentials",
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AccessTokenResponse" }
+              }
+            }
+          },
+          "400": { "description": "Missing or invalid input" },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/api/user/{user_id}": {
+      "get": {
+        "tags": ["User Management"],
+        "summary": "Get user details and permissions",
+        "description": "Returns the user info along with their permissions.\nAuthorization: bearer token.",
+        "operationId": "get_user_details",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "ID of the user to fetch details for",
+            "required": true,
+            "schema": { "type": "integer", "format": "int32" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User details retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/User" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "User not found" }
+        },
+        "security": [{ "bearerAuth": [] }]
+      },
+      "put": {
+        "tags": ["User Management"],
+        "summary": "Update user details and permissions",
+        "description": "Returns the user info along with their permissions.\nAuthorization: bearer token.",
+        "operationId": "update_user_details",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "ID of the user to update details for",
+            "required": true,
+            "schema": { "type": "integer", "format": "int32" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateUserRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "User details updated successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/User" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "User not found" }
+        },
+        "security": [{ "bearerAuth": [] }]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AccessTokenResponse": {
+        "type": "object",
+        "description": "Represents the response containing the JWT access token issued after a successful login.",
+        "required": ["access_token", "user_id"],
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "description": "The JWT access token string to be used for authorization in subsequent requests.",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXCVI9..."
+          },
+          "user_id": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Unique user ID.",
+            "example": "101"
+          }
+        }
+      },
+      "Artifact": {
+        "type": "object",
+        "description": "Represents an uploaded artifact with metadata and file content",
+        "required": [
+          "artifact_id",
+          "file_display_name",
+          "upload_date",
+          "uploaded_by",
+          "file_content"
+        ],
+        "properties": {
+          "artifact_id": {
+            "type": "integer",
+            "format": "int32",
+            "example": 5001
+          },
+          "file_content": {
+            "type": "string",
+            "format": "binary",
+            "description": "Binary content of the artifact"
+          },
+          "file_display_name": { "type": "string", "example": "receipt.pdf" },
+          "upload_date": {
+            "type": "string",
+            "format": "date",
+            "example": "2025-06-01"
+          },
+          "uploaded_by": {
+            "type": "integer",
+            "format": "int32",
+            "example": 101
+          }
+        }
+      },
+      "ArtifactFile": {
+        "type": "object",
+        "description": "File to be saved to as an artifact",
+        "required": ["file_name", "file_content"],
+        "properties": {
+          "file_content": {
+            "type": "string",
+            "format": "binary",
+            "description": "Raw file contents as base64"
+          },
+          "file_name": {
+            "type": "string",
+            "description": "Display name of the uploaded file",
+            "example": "receipt.pdf"
+          }
+        }
+      },
+      "ArtifactReference": {
+        "type": "object",
+        "description": "Reference object for an artifact (lightweight)",
+        "required": ["artifact_id", "file_display_name"],
+        "properties": {
+          "artifact_id": {
+            "type": "integer",
+            "format": "int32",
+            "example": 5001
+          },
+          "file_display_name": { "type": "string", "example": "receipt.pdf" }
+        }
+      },
+      "ArtifactServiceType": {
+        "type": "string",
+        "enum": ["User", "Estate", "Plot", "Ownership", "Payment"]
+      },
+      "ArtifactUploadRequest": {
+        "type": "object",
+        "description": "Request payload for uploading an artifact to the system.",
+        "required": [
+          "artifact_file",
+          "artifact_service",
+          "service_reference_id"
+        ],
+        "properties": {
+          "artifact_file": {
+            "$ref": "#/components/schemas/ArtifactFile",
+            "description": "File contents and metadata for the artifact being uploaded."
+          },
+          "artifact_service": {
+            "$ref": "#/components/schemas/ArtifactServiceType",
+            "description": "Service domain the artifact belongs to."
+          },
+          "service_reference_id": {
+            "type": "integer",
+            "format": "int32",
+            "description": "ID of the record in the service domain this artifact is associated with.",
+            "example": 101
+          }
+        }
+      },
+      "CreateUserRequest": {
+        "type": "object",
+        "description": "Payload to create a new user account.",
+        "required": ["user_name", "name", "password"],
+        "properties": {
+          "cellphone_number": {
+            "type": ["string", "null"],
+            "description": "Optional cellphone number.",
+            "example": "+1234567890"
+          },
+          "email_address": {
+            "type": ["string", "null"],
+            "format": "email",
+            "description": "Optional email address.",
+            "example": "john@example.com"
+          },
+          "identification_number": {
+            "type": ["string", "null"],
+            "description": "Optional national ID or identification number.",
+            "example": "ID123456789"
+          },
+          "name": {
+            "type": "string",
+            "description": "Full name of the user.",
+            "example": "John Doe"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "description": "Password for the account.",
+            "example": "secret123"
+          },
+          "user_name": {
+            "type": "string",
+            "description": "Unique username for the user.",
+            "example": "john_doe"
+          }
+        }
+      },
+      "Estate": {
+        "type": "object",
+        "description": "A residential estate.",
+        "required": ["estate_id", "name", "location", "district", "landmark"],
+        "properties": {
+          "district": {
+            "type": "string",
+            "description": "District where the estate is situated.",
+            "example": "Westlake"
+          },
+          "estate_id": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Unique identifier of the estate.",
+            "example": 1
+          },
+          "landmark": {
+            "type": "string",
+            "description": "Notable landmark near the estate.",
+            "example": "Near the big mall"
+          },
+          "location": {
+            "type": "string",
+            "description": "Location of the estate.",
+            "example": "Durban"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the estate.",
+            "example": "Sunrise Estate"
+          }
+        }
+      },
+      "EstateCreationRequest": {
+        "type": "object",
+        "description": "Request to create a new estate.",
+        "required": ["name", "location", "district", "landmark"],
+        "properties": {
+          "district": {
+            "type": "string",
+            "description": "District where the estate is situated.",
+            "example": "Westlake"
+          },
+          "landmark": {
+            "type": "string",
+            "description": "Notable landmark near the estate.",
+            "example": "Near the big mall"
+          },
+          "location": {
+            "type": "string",
+            "description": "Location of the estate.",
+            "example": "Durban"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the estate.",
+            "example": "Sunrise Estate"
+          }
+        }
+      },
+      "EstateList": {
+        "type": "object",
+        "description": "A list of estates.",
+        "required": ["estates"],
+        "properties": {
+          "estates": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Estate" },
+            "description": "Collection of estate objects."
+          }
+        }
+      },
+      "GetOwnershipPaymentsRequest": {
+        "type": "object",
+        "required": ["ownership_ids"],
+        "properties": {
+          "ownership_ids": {
+            "type": "array",
+            "items": { "type": "integer", "format": "int32" },
+            "example": "[1001, 1002]"
+          }
+        }
+      },
+      "GetPlotsRequest": {
+        "type": "object",
+        "description": "Request to filter plots based on criteria.",
+        "properties": {
+          "allowed_ownership_states": {
+            "type": ["array", "null"],
+            "items": { "$ref": "#/components/schemas/OwnershipState" },
+            "description": "List of allowed ownership states to filter by.",
+            "example": "[PendingContract]"
+          },
+          "estate_id": {
+            "type": ["integer", "null"],
+            "format": "int32",
+            "description": "Filter by estate ID.",
+            "example": 1
+          },
+          "phase": {
+            "type": ["string", "null"],
+            "description": "Filter by estate phase.",
+            "example": "Phase 1"
+          },
+          "plot_number": {
+            "type": ["string", "null"],
+            "description": "Filter by plot number.",
+            "example": "P-101"
+          }
+        }
+      },
+      "ListUsersRequest": {
+        "type": "object",
+        "description": "Parameters to filter users in list query.",
+        "properties": {
+          "cellphone_number": {
+            "type": ["string", "null"],
+            "description": "Filter users by cellphone number",
+            "example": "+1234567890"
+          },
+          "email_address": {
+            "type": ["string", "null"],
+            "format": "email",
+            "description": "Filter users by email address",
+            "example": "john@example.com"
+          },
+          "identification_number": {
+            "type": ["string", "null"],
+            "description": "Filter users by identification number",
+            "example": "ID123456789"
+          },
+          "name_regex": {
+            "type": ["string", "null"],
+            "description": "Filter users by name regex pattern",
+            "example": "Jo*"
+          },
+          "username": {
+            "type": ["string", "null"],
+            "description": "Filter users by exact username",
+            "example": "john_doe"
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "description": "Login credentials used to authenticate a user.",
+        "required": ["username", "password"],
+        "properties": {
+          "password": {
+            "type": "string",
+            "format": "password",
+            "description": "The user's password.",
+            "example": "secret123"
+          },
+          "username": {
+            "type": "string",
+            "description": "The username of the user.",
+            "example": "john_doe"
+          }
+        }
+      },
+      "Ownership": {
+        "type": "object",
+        "description": "Ownership information linking a user to a plot.",
+        "required": [
+          "ownership_id",
+          "user_id",
+          "user_name",
+          "plot_id",
+          "state",
+          "total_sale_value",
+          "monthly_repayment_amount"
+        ],
+        "properties": {
+          "contract_start_date": {
+            "type": ["string", "null"],
+            "format": "date",
+            "example": "2025-06-01"
+          },
+          "monthly_repayment_amount": {
+            "type": "integer",
+            "format": "int32",
+            "example": 50000
+          },
+          "ownership_id": {
+            "type": "integer",
+            "format": "int32",
+            "example": 1001
+          },
+          "plot_id": { "type": "integer", "format": "int32", "example": 101 },
+          "state": { "$ref": "#/components/schemas/OwnershipState" },
+          "total_sale_value": {
+            "type": "integer",
+            "format": "int32",
+            "example": 5000000
+          },
+          "user_id": { "type": "integer", "format": "int32", "example": 101 },
+          "user_name": { "type": "string", "example": "john_doe" }
+        }
+      },
+      "OwnershipCreationRequest": {
+        "type": "object",
+        "description": "Request for creating a new ownership.",
+        "required": [
+          "user_id",
+          "plot_id",
+          "state",
+          "total_sale_value",
+          "monthly_repayment_amount"
+        ],
+        "properties": {
+          "contract_start_date": {
+            "type": ["string", "null"],
+            "format": "date",
+            "example": "2025-06-01"
+          },
+          "monthly_repayment_amount": {
+            "type": "integer",
+            "format": "int32",
+            "example": 50000
+          },
+          "plot_id": { "type": "integer", "format": "int32", "example": 101 },
+          "state": { "$ref": "#/components/schemas/OwnershipState" },
+          "total_sale_value": {
+            "type": "integer",
+            "format": "int32",
+            "example": 5000000
+          },
+          "user_id": { "type": "integer", "format": "int32", "example": 101 }
+        }
+      },
+      "OwnershipState": {
+        "type": "string",
+        "enum": ["PendingContract", "ActivePayment", "Paid", "Defaulted"]
+      },
+      "OwnershipUpdateRequest": {
+        "type": "object",
+        "description": "Request for updating an ownership.",
+        "required": ["ownership_id"],
+        "properties": {
+          "contract_start_date": {
+            "type": ["string", "null"],
+            "format": "date",
+            "example": "2025-06-01"
+          },
+          "monthly_repayment_amount": {
+            "type": ["integer", "null"],
+            "format": "int32",
+            "example": 50000
+          },
+          "ownership_id": {
+            "type": "integer",
+            "format": "int32",
+            "example": 1001
+          },
+          "state": {
+            "oneOf": [
+              { "type": "null" },
+              { "$ref": "#/components/schemas/OwnershipState" }
+            ]
+          },
+          "total_sale_value": {
+            "type": ["integer", "null"],
+            "format": "int32",
+            "example": 5000000
+          }
+        }
+      },
+      "Payment": {
+        "type": "object",
+        "description": "Represents a payment linked to an ownership.",
+        "required": [
+          "payment_id",
+          "ownership_id",
+          "date",
+          "amount",
+          "state",
+          "comment",
+          "reference",
+          "last_changed_by_user"
+        ],
+        "properties": {
+          "amount": { "type": "integer", "format": "int32", "example": 50000 },
+          "comment": { "type": "string", "example": "Payment for May 2025" },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "example": "2025-06-01"
+          },
+          "last_changed_by_user": {
+            "type": "integer",
+            "format": "int32",
+            "example": 101
+          },
+          "ownership_id": {
+            "type": "integer",
+            "format": "int32",
+            "example": 2001
+          },
+          "payment_id": {
+            "type": "integer",
+            "format": "int32",
+            "example": 1001
+          },
+          "proof_of_payment": {
+            "oneOf": [
+              { "type": "null" },
+              { "$ref": "#/components/schemas/ArtifactReference" }
+            ]
+          },
+          "reference": { "type": "string", "example": "REF123456" },
+          "state": { "$ref": "#/components/schemas/PaymentState" }
+        }
+      },
+      "PaymentCreationRequest": {
+        "type": "object",
+        "description": "Request for creating a new payment.",
+        "required": [
+          "ownership_id",
+          "date",
+          "amount",
+          "reference",
+          "user_creating_payment"
+        ],
+        "properties": {
+          "amount": { "type": "integer", "format": "int32", "example": 50000 },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "example": "2025-06-01"
+          },
+          "ownership_id": {
+            "type": "integer",
+            "format": "int32",
+            "example": 2001
+          },
+          "proof_of_payment_file": {
+            "oneOf": [
+              { "type": "null" },
+              { "$ref": "#/components/schemas/ArtifactFile" }
+            ]
+          },
+          "reference": { "type": "string", "example": "REF123456" },
+          "user_creating_payment": {
+            "type": "integer",
+            "format": "int32",
+            "example": 101
+          }
+        }
+      },
+      "PaymentList": {
+        "type": "object",
+        "description": "List wrapper for payments",
+        "required": ["payments"],
+        "properties": {
+          "payments": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Payment" }
+          }
+        }
+      },
+      "PaymentState": {
+        "type": "string",
+        "enum": ["PendingApproval", "Approved", "Rejected"]
+      },
+      "PermissionType": {
+        "type": "string",
+        "enum": [
+          "Employee",
+          "ViewPayments",
+          "ModifyPayments",
+          "ViewUsers",
+          "ModifyUsers",
+          "ViewProperties",
+          "ModifyProperties",
+          "ViewOwnerships",
+          "ModifyOwnerships",
+          "ViewReports"
+        ]
+      },
+      "Plot": {
+        "type": "object",
+        "description": "Represents a plot of land within an estate.",
+        "required": [
+          "plot_id",
+          "estate_id",
+          "plot_number",
+          "phase",
+          "length",
+          "width"
+        ],
+        "properties": {
+          "current_ownership_status": {
+            "oneOf": [
+              { "type": "null" },
+              {
+                "$ref": "#/components/schemas/OwnershipState",
+                "description": "Width of the plot in meters."
+              }
+            ]
+          },
+          "estate_id": {
+            "type": "integer",
+            "format": "int32",
+            "description": "ID of the estate the plot belongs to.",
+            "example": 1
+          },
+          "length": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Length of the plot in meters.",
+            "example": 40
+          },
+          "phase": {
+            "type": "string",
+            "description": "Phase of the estate the plot is in.",
+            "example": "Phase 1"
+          },
+          "plot_id": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Unique identifier of the plot.",
+            "example": 101
+          },
+          "plot_number": {
+            "type": "string",
+            "description": "Plot number identifier.",
+            "example": "P-101"
+          },
+          "width": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Width of the plot in meters.",
+            "example": 30
+          }
+        }
+      },
+      "PlotCreationRequest": {
+        "type": "object",
+        "description": "Request to create a new plot in an estate.",
+        "required": ["estate_id", "plot_number", "phase", "length", "width"],
+        "properties": {
+          "estate_id": {
+            "type": "integer",
+            "format": "int32",
+            "description": "ID of the estate the plot belongs to.",
+            "example": 1
+          },
+          "length": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Length of the plot in meters.",
+            "example": 40
+          },
+          "phase": {
+            "type": "string",
+            "description": "Phase of the estate.",
+            "example": "Phase 1"
+          },
+          "plot_number": {
+            "type": "string",
+            "description": "Plot number identifier.",
+            "example": "P-101"
+          },
+          "width": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Width of the plot in meters.",
+            "example": 30
+          }
+        }
+      },
+      "PlotList": {
+        "type": "object",
+        "description": "A list of plots.",
+        "required": ["plots"],
+        "properties": {
+          "plots": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Plot" },
+            "description": "Collection of plot objects."
+          }
+        }
+      },
+      "UpdatePaymentStateRequest": {
+        "type": "object",
+        "description": "Request to update payment state with optional comment.",
+        "required": ["payment_id", "state", "comment"],
+        "properties": {
+          "comment": {
+            "type": "string",
+            "example": "Marked as completed after verification"
+          },
+          "payment_id": {
+            "type": "integer",
+            "format": "int32",
+            "example": 1001
+          },
+          "state": { "$ref": "#/components/schemas/PaymentState" }
+        }
+      },
+      "UpdateUserRequest": {
+        "type": "object",
+        "description": "Payload to create a new user account.",
+        "required": ["user_id"],
+        "properties": {
+          "cellphone_number": {
+            "type": ["string", "null"],
+            "description": "Optional cellphone number.",
+            "example": "+1234567890"
+          },
+          "email_address": {
+            "type": ["string", "null"],
+            "format": "email",
+            "description": "Optional email address.",
+            "example": "john@example.com"
+          },
+          "identification_number": {
+            "type": ["string", "null"],
+            "description": "Optional national ID or identification number.",
+            "example": "ID123456789"
+          },
+          "is_employee": {
+            "type": ["boolean", "null"],
+            "description": "If the user is an employee",
+            "example": "false"
+          },
+          "name": {
+            "type": ["string", "null"],
+            "description": "Full name of the user.",
+            "example": "John Doe"
+          },
+          "password": {
+            "type": ["string", "null"],
+            "format": "password",
+            "description": "Password for the account.",
+            "example": "secret123"
+          },
+          "permissions": {
+            "type": ["array", "null"],
+            "items": { "$ref": "#/components/schemas/PermissionType" },
+            "description": "List of user permissions to grant",
+            "example": "[ViewPayments, ModifyProperties]"
+          },
+          "user_id": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Unique user ID to update.",
+            "example": 101
+          },
+          "user_name": {
+            "type": ["string", "null"],
+            "description": "Unique username for the user.",
+            "example": "john_doe"
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "description": "A fully populated user as stored in the database.",
+        "required": [
+          "user_id",
+          "username",
+          "name",
+          "permissions",
+          "is_employee"
+        ],
+        "properties": {
+          "cellphone_number": {
+            "type": ["string", "null"],
+            "description": "Optional cellphone number.",
+            "example": "+1234567890"
+          },
+          "email_address": {
+            "type": ["string", "null"],
+            "format": "email",
+            "description": "Optional email address.",
+            "example": "john@example.com"
+          },
+          "identification_number": {
+            "type": ["string", "null"],
+            "description": "Optional ID number.",
+            "example": "ID123456789"
+          },
+          "is_employee": {
+            "type": "boolean",
+            "description": "If user is an employee",
+            "example": "false"
+          },
+          "name": {
+            "type": "string",
+            "description": "Full name.",
+            "example": "John Doe"
+          },
+          "permissions": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PermissionType" },
+            "description": "List of user permissions",
+            "example": "[ViewPayments, ModifyProperties]"
+          },
+          "user_id": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Unique user ID.",
+            "example": 101
+          },
+          "username": {
+            "type": "string",
+            "description": "The username.",
+            "example": "john_doe"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "User Management",
+      "description": "Operations related to user authentication and management"
+    },
+    {
+      "name": "Property Management",
+      "description": "Operations related to estates, plots, and ownership"
+    },
+    {
+      "name": "Payment Management",
+      "description": "Operations related to payment tracking and updates"
+    },
+    {
+      "name": "Artifact Management",
+      "description": "Operations related to archival of artifacts"
+    },
+    {
+      "name": "Health Check",
+      "description": "Operations related to health of the service"
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+{
+  "phase": "Phase LS",
+  "allowed_ownership_states": ["PendingContract"]
+}

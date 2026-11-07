@@ -1,0 +1,137 @@
+name: Rust
+
+on:
+  push:
+    branches: ["**"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Run Standard Tests
+    if: ${{ contains(github.event.head_commit.message, '[ci]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: username
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: db
+          POSTGRES_INITDB_ARGS: "-c max_connections=500"
+        ports:
+          - 5430:5432
+        options: >-
+          --health-cmd pg_isready --health-interval 1s --health-timeout 1s --health-retries 20
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/cache/restore@v4
+        id: cache-test-restore
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install protobuf compiler
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+
+      - name: Wait for Postgres
+        run: |
+          until pg_isready -h localhost -p 5430; do
+            echo "Waiting for postgres..."
+            sleep 1
+          done
+
+      - name: Run tests
+        run: cargo test --verbose
+
+      - uses: actions/cache/save@v4
+        id: cache-test-save
+        if: (success() || failure()) && steps.cache-test-restore.outputs.cache-hit != 'true'
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+  release:
+    name: Release Image
+    if: ${{ contains(github.event.head_commit.message, '[release]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/cache/restore@v4
+        id: cache-test-restore
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Log in to GitHub Container Registry
+        run: |
+          podman login ghcr.io -u ${{ github.actor }} --password "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Extract Cargo package name and version
+        id: cargo_info
+        run: |
+          METADATA=$(cargo metadata --no-deps --format-version 1)
+          NAME=$(echo "$METADATA" | jq -r '.packages[0].name')
+          VERSION=$(echo "$METADATA" | jq -r '.packages[0].version')
+          echo "name=$NAME" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "name=$NAME"
+          echo "version=$VERSION"
+
+      - name: Build and push image
+        run: |
+          IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/${{ steps.cargo_info.outputs.name }}
+          VERSION=${{ steps.cargo_info.outputs.version }}
+          COMMIT_SHA=${{ github.sha }}
+
+          # Tag with version, commit sha, and latest
+          podman build \
+            -t $IMAGE_NAME:latest \
+            -t $IMAGE_NAME:$VERSION \
+            -t $IMAGE_NAME:$COMMIT_SHA .
+
+          podman push $IMAGE_NAME:latest
+          podman push $IMAGE_NAME:$VERSION
+          podman push $IMAGE_NAME:$COMMIT_SHA
+
+      - uses: actions/cache/save@v4
+        id: cache-test-save
+        if: (success() || failure()) && steps.cache-test-restore.outputs.cache-hit != 'true'
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
